@@ -1,0 +1,23 @@
+---
+- name: Include fetch_iso_url.yml
+  ansible.builtin.include_tasks: fetch_iso_url.yml
+
+- name: Build image for running mkksiso
+  containers.podman.podman_image:
+    name: quay.io/shanemcd/lorax
+    state: build
+    path: "{{ role_path }}/files"
+    force: true
+
+- name: Run image
+  containers.podman.podman_container:
+    name: "lorax"
+    recreate: true
+    remove: false
+    detach: false
+    image: quay.io/shanemcd/lorax
+    env:
+      FEDORA_ISO_LINK: "{{ fedora_iso_link }}"
+      FEDORA_ISO_OUTPUT_DIR: "/context"
+    volumes:
+      - "{{ role_path }}/files/:/context:Z"

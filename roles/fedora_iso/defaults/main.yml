@@ -1,0 +1,7 @@
+---
+fedora_iso_version: "40"
+fedora_iso_arch_map:
+  x86_64: x86_64
+  arm64: aarch64
+fedora_iso_architecture: "{{ ansible_architecture }}"
+fedora_iso_variant: "Kinoite"

@@ -1,0 +1,8 @@
+FROM fedora:40
+
+RUN dnf install -y lorax wget
+
+COPY --chown=root:root start.sh /usr/bin/start
+
+ENTRYPOINT [ "bash", "-c" ]
+CMD ["/usr/bin/start"]

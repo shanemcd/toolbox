@@ -1,0 +1,5 @@
+---
+- name: Produce a bootable Fedora ISO with an embedded kickstart
+  hosts: localhost
+  roles:
+    - fedora_iso
