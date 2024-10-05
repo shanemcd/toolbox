@@ -1,0 +1,5 @@
+- name: Clean up temporary directory
+  ansible.builtin.file:
+    state: absent
+    path: "{{ fedora_iso_tmp_build_context.path }}"
+  when: fedora_iso_cleanup

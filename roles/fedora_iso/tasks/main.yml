@@ -2,22 +2,64 @@
 - name: Include fetch_iso_url.yml
   ansible.builtin.include_tasks: fetch_iso_url.yml
 
+- name: Create temporary directory for build context
+  ansible.builtin.tempfile:
+    state: directory
+  register: fedora_iso_tmp_build_context
+  notify: Clean up temporary directory
+  when: not fedora_iso_build_context
+
+- name: Get dest for Fedora ISO download
+  ansible.builtin.set_fact:
+    fedora_iso_download_dest: "{{ fedora_iso_build_context }}/{{ fedora_iso_link | basename }}"
+
+- name: Stat file to check if it exists
+  ansible.builtin.stat:
+    path: "{{ fedora_iso_download_dest }}"
+  register: stat_result
+
+- name: Download Fedora ISO (only if dest does not exist)
+  ansible.builtin.get_url:
+    url: "{{ fedora_iso_link }}"
+    dest: "{{ fedora_iso_download_dest }}"
+    mode: '0600'
+  register: fedora_iso_download
+  when: not stat_result.stat.exists
+
+- name: Set fact for new build context
+  ansible.builtin.set_fact:
+    fedora_iso_build_context: "{{ fedora_iso_build_context or fedora_iso_tmp_build_context.path }}"
+
+- name: Render kickstart
+  ansible.builtin.template:
+    src: ks.cfg.j2
+    dest: "{{ fedora_iso_build_context }}/ks.cfg"
+    mode: '0600'
+
+- name: Copy Containerfile and entrypoint to build context
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ fedora_iso_build_context }}"
+    mode: '0600'
+  loop:
+    - Containerfile
+    - start.sh
+
 - name: Build image for running mkksiso
   containers.podman.podman_image:
     name: quay.io/shanemcd/lorax
     state: build
-    path: "{{ role_path }}/files"
+    path: "{{ fedora_iso_build_context }}"
     force: true
 
 - name: Run image
   containers.podman.podman_container:
-    name: "lorax"
+    name: lorax
     recreate: true
-    remove: false
+    remove: true
     detach: false
     image: quay.io/shanemcd/lorax
     env:
-      FEDORA_ISO_LINK: "{{ fedora_iso_link }}"
-      FEDORA_ISO_OUTPUT_DIR: "/context"
+      FEDORA_ISO_PATH: "/context/{{ fedora_iso_link | basename }}"
     volumes:
-      - "{{ role_path }}/files/:/context:Z"
+      - "{{ fedora_iso_build_context }}/:/context:Z"

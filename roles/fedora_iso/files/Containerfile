@@ -1,8 +1,9 @@
 FROM fedora:40
 
-RUN dnf install -y lorax wget
+RUN dnf install -y lorax
 
 COPY --chown=root:root start.sh /usr/bin/start
+RUN chmod +x /usr/bin/start
 
 ENTRYPOINT [ "bash", "-c" ]
 CMD ["/usr/bin/start"]

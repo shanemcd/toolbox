@@ -1,0 +1,23 @@
+# Partitioning (using default partitioning)
+clearpart --all --initlabel
+autopart --type=lvm --fstype=xfs
+
+# Keyboard Layout
+keyboard dvorak
+
+# Language
+lang en_US.UTF-8
+
+# Timezone
+timezone America/New_York --utc
+
+# User creation
+rootpw --lock
+user shanemcd --iscrypted --password=$6$PCPK9LqomY@2y@q9wLVvc_pJFvfYJp-CJZ8R!xCHHMtC8Zvx.8cGy.s786zE7mArvhpyy4_6nsDx!pc4CQJ$iRN6F5Bx+2QiVUvMUtCrq3XWlE5YzqU2ykv8VeRAQ7hJTGCWGQZAm8VxE/k91FR01mL44F2hbrj6psXrUmlCwA==
+
+# Network configuration
+network --bootproto=dhcp --hostname={{ fedora_iso_variant | lower }}
+
+ostreesetup --nogpg --osname="fedora" --remote="fedora" --url=file:///ostree/repo/ --ref="fedora/40/{{ fedora_iso_arch_map[fedora_iso_architecture] }}/{{ fedora_iso_variant | lower }}"
+
+reboot
