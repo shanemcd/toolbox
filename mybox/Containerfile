@@ -1,0 +1,3 @@
+FROM quay.io/shanemcd/fedora-bootc:latest
+
+RUN unset container && rpm-ostree rebase fedora:fedora/VersionNumber/$(uname -m)/kinoite

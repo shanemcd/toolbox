@@ -2,13 +2,16 @@
 
 set -x
 
-# Check for FEDORA_ISO_PATH environment variable
-if [ -z "${FEDORA_ISO_PATH}" ]; then
-  echo "Error: FEDORA_ISO_PATH environment variable is not set."
-  exit 1
+# Check if FEDORA_ISO_SRC and FEDORA_ISO_DEST are set
+if [ -z "$FEDORA_ISO_SRC" ] || [ -z "$FEDORA_ISO_DEST" ]; then
+    echo "Error: Both FEDORA_ISO_SRC and FEDORA_ISO_DEST must be set."
+    exit 1
 fi
 
-FEDORA_ISO_DIR=$(dirname "${FEDORA_ISO_PATH}")
-FEDORA_ISO_FILE_NAME=$(basename "${FEDORA_ISO_PATH}")
+# Check if source path exists
+if [ ! -e "$FEDORA_ISO_SRC" ]; then
+    echo "Error: Source ISO path does not exist."
+    exit 1
+fi
 
-mkksiso --ks /context/ks.cfg ${FEDORA_ISO_DIR}/${FEDORA_ISO_FILE_NAME} ${FEDORA_ISO_DIR}/ks-${FEDORA_ISO_FILE_NAME}
+mkksiso --ks /context/ks.cfg "${FEDORA_ISO_SRC}" "${FEDORA_ISO_DEST}"

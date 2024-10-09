@@ -1,6 +1,10 @@
-# Partitioning (using default partitioning)
-clearpart --all --initlabel
-autopart --type=lvm --fstype=xfs
+text
+network --bootproto=dhcp --device=link --activate --hostname={{ fedora_iso_variant | lower }}
+
+# Basic partitioning
+clearpart --all --initlabel --disklabel=gpt
+reqpart --add-boot
+part / --grow --fstype xfs
 
 # Keyboard Layout
 keyboard dvorak
@@ -11,13 +15,17 @@ lang en_US.UTF-8
 # Timezone
 timezone America/New_York --utc
 
+# Auth
+authselect --passalgo=sha512 --useshadow
+
 # User creation
 rootpw --lock
-user shanemcd --iscrypted --password=$6$PCPK9LqomY@2y@q9wLVvc_pJFvfYJp-CJZ8R!xCHHMtC8Zvx.8cGy.s786zE7mArvhpyy4_6nsDx!pc4CQJ$iRN6F5Bx+2QiVUvMUtCrq3XWlE5YzqU2ykv8VeRAQ7hJTGCWGQZAm8VxE/k91FR01mL44F2hbrj6psXrUmlCwA==
+user --name=shanemcd --groups=wheel --iscrypted --password=$6$lZHHj/fLFzZVO2i4$Qw7mGaWwpeW4/JjLWZXLz7mP5xO.6iyECdMwDvRE0k7yAiMT4ougbg8/TGcdCj0zk8QzhqT3JPSSlu6Ev60XJ1
 
-# Network configuration
-network --bootproto=dhcp --hostname={{ fedora_iso_variant | lower }}
+# Here's where we reference the container image to install - notice the kickstart
+# has no `%packages` section!  What's being installed here is a container image.
+ostreecontainer --url quay.io/shanemcd/fedora-bootc:latest
 
-ostreesetup --nogpg --osname="fedora" --remote="fedora" --url=file:///ostree/repo/ --ref="fedora/40/{{ fedora_iso_arch_map[fedora_iso_architecture] }}/{{ fedora_iso_variant | lower }}"
+services --enabled=sshd
 
 reboot

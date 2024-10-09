@@ -2,16 +2,10 @@
 - name: Include fetch_iso_url.yml
   ansible.builtin.include_tasks: fetch_iso_url.yml
 
-- name: Create temporary directory for build context
-  ansible.builtin.tempfile:
-    state: directory
-  register: fedora_iso_tmp_build_context
-  notify: Clean up temporary directory
-  when: not fedora_iso_build_context
-
-- name: Get dest for Fedora ISO download
+- name: Construct ISO paths
   ansible.builtin.set_fact:
     fedora_iso_download_dest: "{{ fedora_iso_build_context }}/{{ fedora_iso_link | basename }}"
+    fedora_iso_with_kickstart: "{{ fedora_iso_build_context }}/ks-{{ fedora_iso_link | basename }}"
 
 - name: Stat file to check if it exists
   ansible.builtin.stat:
@@ -26,6 +20,28 @@
   register: fedora_iso_download
   when: not stat_result.stat.exists
 
+- name: Check if force flag is set
+  ansible.builtin.set_fact:
+    fedora_iso_force: true if fedora_iso_force == true else false
+
+- name: Check if Fedora ISO with kickstart already exists
+  ansible.builtin.stat:
+    path: "{{ fedora_iso_with_kickstart }}"
+  register: fedora_iso_with_kickstart_result
+
+- name: Remove existing ISO file if force flag is set
+  ansible.builtin.file:
+    state: absent
+    path: "{{ fedora_iso_with_kickstart }}"
+  when: fedora_iso_force and fedora_iso_with_kickstart_result.stat.exists
+
+- name: Create temporary directory for build context
+  ansible.builtin.tempfile:
+    state: directory
+  register: fedora_iso_tmp_build_context
+  notify: Clean up temporary directory
+  when: not fedora_iso_build_context
+
 - name: Set fact for new build context
   ansible.builtin.set_fact:
     fedora_iso_build_context: "{{ fedora_iso_build_context or fedora_iso_tmp_build_context.path }}"
@@ -36,7 +52,7 @@
     dest: "{{ fedora_iso_build_context }}/ks.cfg"
     mode: '0600'
 
-- name: Copy Containerfile and entrypoint to build context
+- name: Copy Containerfile and sources to build context
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ fedora_iso_build_context }}"
@@ -44,15 +60,16 @@
   loop:
     - Containerfile
     - start.sh
+    - .containerignore
 
 - name: Build image for running mkksiso
   containers.podman.podman_image:
     name: quay.io/shanemcd/lorax
     state: build
     path: "{{ fedora_iso_build_context }}"
-    force: true
+    force: "{{ fedora_iso_force }}"
 
-- name: Run image
+- name: Generate new ISO w/ our kickstart, unless the new image already exists
   containers.podman.podman_container:
     name: lorax
     recreate: true
@@ -60,6 +77,8 @@
     detach: false
     image: quay.io/shanemcd/lorax
     env:
-      FEDORA_ISO_PATH: "/context/{{ fedora_iso_link | basename }}"
+      FEDORA_ISO_SRC: "/context/{{ fedora_iso_link | basename }}"
+      FEDORA_ISO_DEST: "/context/{{ fedora_iso_with_kickstart | basename }}"
     volumes:
       - "{{ fedora_iso_build_context }}/:/context:Z"
+  when: not fedora_iso_with_kickstart_result.stat.exists or fedora_iso_force
