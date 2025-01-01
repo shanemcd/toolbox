@@ -1,0 +1,20 @@
+graphical
+network --bootproto=dhcp --activate --hostname={{ fedora_iso_variant | lower }}
+
+clearpart --all --initlabel --disklabel=gpt
+reqpart --add-boot
+part / --grow --fstype xfs
+
+keyboard dvorak
+lang en_US.UTF-8
+timezone America/New_York --utc
+
+authselect --passalgo=sha512 --useshadow
+rootpw --lock
+user --name=shanemcd --groups=wheel --iscrypted --password={{ fedora_iso_kickstart_password | password_hash('sha512') }}
+
+ostreecontainer --url quay.io/fedora/fedora-kinoite:41
+
+services --enabled=sshd
+
+reboot

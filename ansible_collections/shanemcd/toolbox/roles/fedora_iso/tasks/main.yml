@@ -20,10 +20,6 @@
   register: fedora_iso_download
   when: not stat_result.stat.exists
 
-- name: Check if force flag is set
-  ansible.builtin.set_fact:
-    fedora_iso_force: true if fedora_iso_force == true else false
-
 - name: Check if Fedora ISO with kickstart already exists
   ansible.builtin.stat:
     path: "{{ fedora_iso_with_kickstart }}"
@@ -76,6 +72,7 @@
     remove: true
     detach: false
     image: quay.io/shanemcd/lorax
+    privileged: true
     env:
       FEDORA_ISO_SRC: "/context/{{ fedora_iso_link | basename }}"
       FEDORA_ISO_DEST: "/context/{{ fedora_iso_with_kickstart | basename }}"

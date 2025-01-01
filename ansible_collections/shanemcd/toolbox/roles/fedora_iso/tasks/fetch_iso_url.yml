@@ -1,12 +1,12 @@
 ---
 - name: Fetch Fedora release metadata
   ansible.builtin.uri:
-    url: https://getfedora.org/releases.json
+    url: "{{ fedora_releases_json_url }}"
   register: fedora_releases
 
 - name: Get latest version of Fedora
   ansible.builtin.set_fact:
-    fedora_version: "{{ fedora_releases.json | map(attribute='version') | max }}"
+    fedora_iso_version: "{{ fedora_releases.json | map(attribute='version') | max }}"
   when: fedora_iso_version == "latest"
 
 - name: Extract ISO link
@@ -20,7 +20,7 @@
         selectattr("link", "search", ".iso") |
         first
       }}
-
+      
 - name: Set fact for ISO link
   ansible.builtin.set_fact:
     fedora_iso_link: "{{ fedora_iso_info.link }}"

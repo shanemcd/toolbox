@@ -1,10 +1,11 @@
 ---
-fedora_iso_version: "40"
+fedora_iso_version: "latest"
 fedora_iso_arch_map:
   x86_64: x86_64
   arm64: aarch64
 fedora_iso_architecture: "{{ ansible_architecture }}"
-fedora_iso_variant: "Silverblue"
+fedora_iso_variant: "Kinoite"
 fedora_iso_build_context: "" # Will create a temporary directory if not provided
 fedora_iso_cleanup: false # Whether to delete the temporary directory created for storing the downloaded ISO and rendered kickstart
 fedora_iso_force: false
+fedora_releases_json_url: "https://getfedora.org/releases.json"
