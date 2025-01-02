@@ -7,12 +7,24 @@
     fedora_iso_download_dest: "{{ fedora_iso_build_context }}/{{ fedora_iso_link | basename }}"
     fedora_iso_with_kickstart: "{{ fedora_iso_build_context }}/ks-{{ fedora_iso_link | basename }}"
 
+- name: Create Fedora ISO build directory
+  ansible.builtin.file:
+    path: "{{ fedora_iso_build_context }}"
+    state: directory
+    mode: '0700'
+  register: build_context
+
+- name: Generate shadow password for kickstart
+  set_fact:
+    fedora_iso_kickstart_password: "{{ lookup('ansible.builtin.password', '/dev/null length=6') }}"
+  when: fedora_iso_kickstart_password is not defined
+
 - name: Stat file to check if it exists
   ansible.builtin.stat:
     path: "{{ fedora_iso_download_dest }}"
   register: stat_result
 
-- name: Download Fedora ISO (only if dest does not exist)
+- name: Download Fedora ISO
   ansible.builtin.get_url:
     url: "{{ fedora_iso_link }}"
     dest: "{{ fedora_iso_download_dest }}"
@@ -31,21 +43,10 @@
     path: "{{ fedora_iso_with_kickstart }}"
   when: fedora_iso_force and fedora_iso_with_kickstart_result.stat.exists
 
-- name: Create temporary directory for build context
-  ansible.builtin.tempfile:
-    state: directory
-  register: fedora_iso_tmp_build_context
-  notify: Clean up temporary directory
-  when: not fedora_iso_build_context
-
-- name: Set fact for new build context
-  ansible.builtin.set_fact:
-    fedora_iso_build_context: "{{ fedora_iso_build_context or fedora_iso_tmp_build_context.path }}"
-
 - name: Render kickstart
   ansible.builtin.template:
     src: ks.cfg.j2
-    dest: "{{ fedora_iso_build_context }}/ks.cfg"
+    dest: "{{ build_context.path }}/ks.cfg"
     mode: '0600'
 
 - name: Copy Containerfile and sources to build context
@@ -62,7 +63,7 @@
   containers.podman.podman_image:
     name: quay.io/shanemcd/lorax
     state: build
-    path: "{{ fedora_iso_build_context }}"
+    path: "{{ build_context.path }}"
     force: "{{ fedora_iso_force }}"
 
 - name: Generate new ISO w/ our kickstart, unless the new image already exists
@@ -77,5 +78,5 @@
       FEDORA_ISO_SRC: "/context/{{ fedora_iso_link | basename }}"
       FEDORA_ISO_DEST: "/context/{{ fedora_iso_with_kickstart | basename }}"
     volumes:
-      - "{{ fedora_iso_build_context }}/:/context:Z"
+      - "{{ build_context.path }}/:/context:Z"
   when: not fedora_iso_with_kickstart_result.stat.exists or fedora_iso_force
