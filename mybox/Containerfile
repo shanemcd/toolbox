@@ -1,3 +1,7 @@
-FROM quay.io/shanemcd/fedora-bootc:latest
+FROM quay.io/fedora/fedora-silverblue:41
 
-RUN unset container && rpm-ostree rebase fedora:fedora/VersionNumber/$(uname -m)/kinoite
+RUN rpm-ostree install --enablerepo=fedora,updates,rpmfusion-nonfree-nvidia-driver akmod-nvidia
+
+RUN cat <<EOF >> /usr/lib/bootc/kargs.d/00-nvidia.toml
+kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]
+EOF
