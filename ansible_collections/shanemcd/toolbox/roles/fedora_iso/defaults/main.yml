@@ -9,3 +9,4 @@ fedora_iso_build_context: "{{ playbook_dir }}/.generated"
 fedora_iso_cleanup: false  # Whether to delete the temporary directory created for storing the downloaded ISO and rendered kickstart
 fedora_iso_force: false
 fedora_releases_json_url: "https://getfedora.org/releases.json"
+fedora_iso_kickstart_shutdown_command: "reboot"

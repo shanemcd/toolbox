@@ -1,13 +1,14 @@
 graphical
-network --bootproto=dhcp --activate --hostname={{ fedora_iso_variant | lower }}
-
-ignoredisk --only-use=disk/by-id/{{ fedora_iso_target_disk_id }}
-clearpart --all --initlabel --disklabel=gpt
-autopart --type=lvm --fstype=xfs
 
 keyboard dvorak
 lang en_US.UTF-8
 timezone America/New_York --utc
+
+bootloader --append="rd.driver.blacklist=nouveau modprobe.blacklist=nouveau nvidia-drm.modeset=1"
+
+ignoredisk --only-use=disk/by-id/{{ fedora_iso_target_disk_id }}
+clearpart --all --initlabel --disklabel=gpt
+autopart --type=lvm --fstype=xfs
 
 authselect --passalgo=sha512 --useshadow
 rootpw --lock
@@ -15,6 +16,7 @@ user --name=shanemcd --groups=wheel --iscrypted --password={{ fedora_iso_kicksta
 
 ostreecontainer --url quay.io/shanemcd/mybox
 
+network --bootproto=dhcp --activate --hostname={{ fedora_iso_variant | lower }}
 services --enabled=sshd
 
-reboot
+{{ fedora_iso_kickstart_shutdown_command }}

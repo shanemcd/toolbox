@@ -1,7 +1,8 @@
 FROM quay.io/fedora/fedora-silverblue:41
 
-RUN rpm-ostree install --enablerepo=fedora,updates,rpmfusion-nonfree-nvidia-driver akmod-nvidia
-
-RUN cat <<EOF >> /usr/lib/bootc/kargs.d/00-nvidia.toml
-kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]
-EOF
+RUN cd /etc/yum.repos.d/ && \
+    curl -LO https://developer.download.nvidia.com/compute/cuda/repos/fedora41/x86_64/cuda-fedora41.repo && \
+    export KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}') && \
+    dnf install -y kernel-devel-$KERNEL_UNAME kernel-devel-matched-$KERNEL_UNAME && \
+    dnf install -y nvidia-driver kmod-nvidia-latest-dkms && \    
+    dkms autoinstall -k $KERNEL_UNAME
