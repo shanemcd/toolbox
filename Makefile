@@ -1,6 +1,6 @@
 .PHONY: mybox
 mybox:
-	podman build -t quay.io/shanemcd/mybox:latest mybox
+	podman build -t quay.io/shanemcd/mybox:latest -t quay.io/shanemcd/mybox:$(shell date "+%Y%m%d%s") mybox
 
 vm-disk.qcow2:
 	qemu-img create -f qcow2 vm-disk.qcow2 20G
