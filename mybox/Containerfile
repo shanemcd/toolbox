@@ -1,8 +1,8 @@
 FROM quay.io/fedora/fedora-kinoite:41
 
-RUN cd /etc/yum.repos.d/ && \
+RUN source /etc/os-release && cd /etc/yum.repos.d/ && \
     dnf update -y && \
-    curl -LO https://developer.download.nvidia.com/compute/cuda/repos/fedora41/x86_64/cuda-fedora41.repo && \
+    curl -LO https://developer.download.nvidia.com/compute/cuda/repos/fedora$VERSION_ID/$(uname -m)/cuda-fedora41.repo && \
     export KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}') && \
     dnf install -y kernel-devel-$KERNEL_UNAME kernel-devel-matched-$KERNEL_UNAME && \
     dnf install -y nvidia-driver kmod-nvidia-latest-dkms nvidia-container-toolkit-base nvidia-driver-cuda-libs && \    
