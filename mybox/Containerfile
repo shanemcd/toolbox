@@ -36,8 +36,12 @@ RUN <<EORUN
     dnf copr enable -y lizardbyte/stable
     dnf install -y Sunshine
 
+    # Tailscale
+    dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+    dnf install -y tailscale
+
     # Misc
-    dnf install -y emacs zsh python-virtualenvwrapper fzf
+    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper
 
     rm -rf /var/cache/*
 EORUN
