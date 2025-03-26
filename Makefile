@@ -3,19 +3,19 @@ mybox:
 	podman build --pull=Always -t quay.io/shanemcd/mybox:latest -t quay.io/shanemcd/mybox:$(shell date "+%Y%m%d%s") mybox
 
 vm-disk.qcow2:
-	qemu-img create -f qcow2 vm-disk.qcow2 20G
+	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 20G
 
 qemu: vm-disk.qcow2 context/custom.iso
 	qemu-system-x86_64 -enable-kvm \
 		-m 10000 \
 		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
-		-drive file=/home/shanemcd/primary-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
 		-boot d -cdrom $(CURDIR)/context/custom.iso
 
 	qemu-system-x86_64 -enable-kvm \
 		-m 10000 \
 		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
-		-drive file=/home/shanemcd/primary-disk.qcow2,format=qcow2,if=none,id=primary_disk
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk
 
 context:
 	mkdir -p $@

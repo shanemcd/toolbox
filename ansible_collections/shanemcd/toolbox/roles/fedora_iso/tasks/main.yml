@@ -5,7 +5,7 @@
 - name: Construct ISO paths
   ansible.builtin.set_fact:
     fedora_iso_download_dest: "{{ fedora_iso_build_context }}/{{ fedora_iso_link | basename }}"
-    fedora_iso_with_kickstart: "{{ fedora_iso_build_context }}/ks-{{ fedora_iso_link | basename }}"
+    fedora_iso_with_kickstart: "{{ fedora_iso_build_context }}/custom.iso"
 
 - name: Create Fedora ISO build directory
   ansible.builtin.file:

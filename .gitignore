@@ -1,3 +1,5 @@
 .DS_Store
 .vscode
 /ansible_collections/shanemcd/toolbox/playbooks/.generated/
+/context/
+/vm-disk.qcow2
