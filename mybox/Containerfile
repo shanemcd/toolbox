@@ -41,7 +41,7 @@ RUN <<EORUN
     dnf install -y tailscale
 
     # Misc
-    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper
+    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu
 
     rm -rf /var/cache/*
 EORUN
