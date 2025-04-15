@@ -40,8 +40,11 @@ RUN <<EORUN
     dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
     dnf install -y tailscale
 
+    dnf copr -y enable claaj/typst
+    dnf install -y typst
+
     # Misc
-    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu
+    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu ripgrep pandoc
 
     rm -rf /var/cache/*
 EORUN
