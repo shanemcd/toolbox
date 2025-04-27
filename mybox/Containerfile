@@ -1,7 +1,13 @@
-FROM quay.io/fedora/fedora-kinoite:41
+FROM quay.io/fedora/fedora-kinoite:42
 
 RUN <<EORUN
     set -xeuo pipefail
+
+    # Prevent updating the kernel baked into the parent image,
+    # to avoid needing to take extra steps to turn it back into
+    # a bootable image.
+    echo "exclude=kernel-core kernel" >> /etc/dnf/dnf.conf
+
     dnf update -y
 
     # Pulled from https://github.com/travier/fedora-sysexts/blob/main/1password-gui/Containerfile
@@ -18,22 +24,29 @@ RUN <<EORUN
     rmdir /opt
     mv /opt{.bak,}
 
-    cd /etc/yum.repos.d/
-
     # Nvidia drivers / container toolkit
     source /etc/os-release
-    curl -LO https://developer.download.nvidia.com/compute/cuda/repos/fedora$VERSION_ID/$(uname -m)/cuda-fedora$VERSION_ID.repo
-    export KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')
+
+    dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm
+    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$VERSION_ID.noarch.rpm
+    
+    # Install the packages corresponding to the kernel inside of the image,
+    # since uname -r will return the version of the host's kernal
+    export KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')    
     dnf install -y kernel-devel-$KERNEL_UNAME kernel-devel-matched-$KERNEL_UNAME
-    dnf install -y nvidia-driver kmod-nvidia-latest-dkms nvidia-container-toolkit-base nvidia-driver-cuda-libs nvidia-driver-cuda --allowerasing   
-    dkms autoinstall -k $KERNEL_UNAME
+
+    dnf install -y akmod-nvidia
+
+    # Prebuild kernel extensions inside of our bootable image
+    akmods --force --kernels $KERNEL_UNAME
+    depmod $KERNEL_UNAME
 
     # Docker
-    curl -LO https://download.docker.com/linux/fedora/docker-ce.repo
+    curl -o /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/fedora/docker-ce.repo
     dnf install -y docker-ce
 
     # Sunshine
-    dnf copr enable -y lizardbyte/stable
+    dnf copr enable -y lizardbyte/beta
     dnf install -y Sunshine
 
     # Tailscale

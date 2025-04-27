@@ -44,13 +44,5 @@ $ ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
 I test to make sure the thing can boot at all by doing this:
 
 ```
-$ qemu-img create -f qcow2 vm-disk.qcow2 40G
-$ qemu-system-x86_64 -enable-kvm \
-    -boot d -cdrom
-    ~/Desktop/mybox/ks-Fedora-Everything-netinst-x86_64-41-1.4.iso \
-    -m 10000 -device virtio-blk-pci,drive=vm_disk,serial="f1ce90" \
-    -drive file=vm-disk.qcow2,format=qcow2,if=none,id=vm_disk # This installs onto the virtual disk
-$ qemu-system-x86_64 -enable-kvm \
-    -m 10000 -device virtio-blk-pci,drive=vm_disk,serial="f1ce90" \
-    -drive file=vm-disk.qcow2,format=qcow2,if=none,id=vm_disk # This boots the OS we just installed on the virtual disk
-```
+$ make qemu
+``` 

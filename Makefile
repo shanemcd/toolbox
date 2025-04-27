@@ -1,6 +1,23 @@
+MYBOX_IMAGE ?= quay.io/shanemcd/mybox
+MYBOX_VERSION ?= $(shell date "+%Y%m%d")
+
 .PHONY: mybox
-mybox:
-	podman build --pull=Always -t quay.io/shanemcd/mybox:latest -t quay.io/shanemcd/mybox:$(shell date "+%Y%m%d%s") mybox
+mybox: build-mybox
+
+.PHONY: build-mybox
+build-mybox:
+	podman build --pull=Always -t $(MYBOX_IMAGE):latest -t $(MYBOX_IMAGE):$(MYBOX_VERSION) mybox
+
+.PHONY: push--mybox
+push-mybox: mybox
+	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)
+
+.PHONY: bootc-switch-mybox
+bootc-switch-mybox:
+	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION) --apply
+
+.PHONY: update-mybox
+update-mybox: build-mybox push-mybox bootc-switch-mybox
 
 vm-disk.qcow2:
 	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 20G
