@@ -1,0 +1,182 @@
+- name: Install and start Tailscale on JetKVM
+  hosts: all
+  gather_facts: false
+  vars:
+    arch: arm
+    download_dir: /tmp
+    remote_path: /userdata/tailscale.tar.gz
+    extract_path: /userdata/tailscale
+  tasks:
+    - name: Check /proc/cpuinfo for Rockchip
+      raw: cat /proc/cpuinfo
+      register: cpuinfo
+      ignore_errors: true
+
+    - name: Fail if not JetKVM
+      fail:
+        msg: "We do not appear to be running inside JetKVM (no 'Rockchip' string found in /proc/cpuinfo)"
+      when: cpuinfo.rc != 0 or ('Rockchip' not in cpuinfo.stdout)
+
+    - name: Locate tailscaled
+      raw: find /userdata/tailscale -name tailscaled -executable -print -quit
+      register: tailscaled_check
+      failed_when: false
+      changed_when: false
+
+    - name: Set tailscale_dir from found tailscaled path
+      set_fact:
+        tailscale_dir: "{{ tailscaled_check.stdout | dirname }}"
+      when: tailscaled_check.stdout != "" and tailscale_dir is not defined
+
+    - name: Locate tailscale client binary
+      raw: find /userdata/tailscale -name tailscale -type f -executable -print -quit
+      register: tailscale_check
+      failed_when: false
+      changed_when: false
+
+    - name: Set tailscale path if found
+      set_fact:
+        tailscale_bin: "{{ tailscale_check.stdout | trim }}"
+      when: tailscale_check.stdout != ""
+
+    - name: Check Tailscale login status
+      raw: "{{ tailscale_bin }} status"
+      register: ts_status
+      failed_when: false
+      changed_when: false
+      when: tailscale_bin is defined
+
+    - name: End play if already installed and logged in
+      meta: end_play
+      when: >
+        tailscale_bin is defined and
+        tailscaled_check.stdout != "" and
+        ts_status.rc == 0
+
+    - name: Ensure Tailscale auth key is provided
+      fail:
+        msg: "You must provide tailscale_auth_key via --extra-vars"
+      when: tailscale_auth_key is not defined
+
+    - block:
+        - name: Query Tailscale GitHub releases API
+          uri:
+            url: https://api.github.com/repos/tailscale/tailscale/releases/latest
+            return_content: true
+          register: release_info
+          delegate_to: localhost
+
+        - name: Extract version string
+          set_fact:
+            tailscale_version: "{{ release_info.json.tag_name | regex_replace('^v', '') }}"
+          delegate_to: localhost
+
+        - name: Construct paths
+          set_fact:
+            tailscale_url: "https://pkgs.tailscale.com/stable/tailscale_{{ tailscale_version }}_{{ arch }}.tgz"
+            tailscale_file: "{{ download_dir }}/tailscale_{{ tailscale_version }}_{{ arch }}.tgz"
+            tailscale_dir: "{{ extract_path }}/tailscale_{{ tailscale_version }}_{{ arch }}"
+          delegate_to: localhost
+
+        - name: Download Tailscale tarball
+          get_url:
+            url: "{{ tailscale_url }}"
+            dest: "{{ tailscale_file }}"
+            mode: '0644'
+          delegate_to: localhost
+
+        - name: Stream Tailscale tarball to remote
+          vars:
+            ansible_ssh_common_args: "{{ hostvars[inventory_hostname].ansible_ssh_common_args | default('') }}"
+          shell: |
+            cat "{{ tailscale_file }}" | ssh {{ ansible_user | default('root') }}@{{ inventory_hostname }} {{ ansible_ssh_common_args }} 'cat > {{ remote_path }}'
+          delegate_to: localhost
+
+        - name: Extract Tailscale tarball
+          raw: |
+            mkdir -p {{ extract_path }}
+            tar -xzvf {{ remote_path }} -C {{ extract_path }}
+      name: Download and extract Tailscale
+      when: tailscaled_check.stdout == ""
+
+    - block:
+        - name: Write S22tailscale init script
+          raw: |
+            cat > /etc/init.d/S22tailscale <<'EOF'
+            {{ script_content }}
+            EOF
+      vars:
+        script_content: |
+          #!/bin/sh
+          log="/tmp/ts.log"
+          tsdir="{{ tailscale_dir }}"
+          tspath="{{ tailscale_dir }}/tailscale"
+
+          echo "$(date): S22tailscale script starting with arg: $1" >> $log
+
+          wait_for_tun() {
+            modprobe tun 2>>$log
+            for i in $(seq 1 10); do
+              [ -e /dev/net/tun ] && return 0
+              echo "$(date): /dev/net/tun not ready, retrying..." >> $log
+              sleep 1
+            done
+            echo "$(date): /dev/net/tun still not present after waiting" >> $log
+            return 1
+          }
+
+          wait_for_network() {
+            for i in $(seq 1 10); do
+              ip route | grep default >/dev/null && return 0
+              echo "$(date): no default route yet, retrying..." >> $log
+              sleep 1
+            done
+            echo "$(date): still no default route after waiting" >> $log
+            return 1
+          }
+
+          wait_for_daemon_ready() {
+            for i in $(seq 1 20); do
+              out=$("$tspath" status 2>&1)
+              rc=$?
+              if [ "$rc" -eq 0 ]; then
+                return 0
+              elif [ "$rc" -eq 1 ] && echo "$out" | grep -q "Logged out"; then
+                return 0
+              fi
+              echo "$(date): tailscaled not ready (rc=$rc), output: $out" >> $log
+              sleep 1
+            done
+            echo "$(date): tailscaled did not become responsive in time" >> $log
+            return 1
+          }
+
+          case "$1" in
+            start)
+              wait_for_tun || exit 1
+              wait_for_network || exit 1
+              echo "$(date): Starting tailscaled..." >> $log
+              (
+                TS_DEBUG_FIREWALL_MODE=nftables "$tsdir/tailscaled" \
+                  -statedir /userdata/tailscale-state
+              ) >> $log 2>&1 &
+              wait_for_daemon_ready || exit 1
+              ;;
+            stop)
+              echo "$(date): Stopping tailscaled..." >> $log
+              killall tailscaled >> $log 2>&1
+              ;;
+            *)
+              echo "Usage: $0 {start|stop}" >&2
+              exit 1
+              ;;
+          esac
+
+    - name: Make init script executable
+      raw: chmod 755 /etc/init.d/S22tailscale
+
+    - name: Start tailscaled
+      raw: /etc/init.d/S22tailscale start
+
+    - name: Log in to Tailscale with auth key
+      raw: "{{ tailscale_bin }} login --auth-key={{ tailscale_auth_key }}"
