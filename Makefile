@@ -11,10 +11,11 @@ build-mybox:
 .PHONY: push--mybox
 push-mybox: mybox
 	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)
+	podman push $(MYBOX_IMAGE):latest
 
 .PHONY: bootc-switch-mybox
 bootc-switch-mybox:
-	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION) --apply
+	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION)
 
 .PHONY: update-mybox
 update-mybox: build-mybox push-mybox bootc-switch-mybox

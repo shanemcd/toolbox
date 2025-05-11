@@ -41,9 +41,15 @@ RUN <<EORUN
     akmods --force --kernels $KERNEL_UNAME
     depmod $KERNEL_UNAME
 
+    dnf copr enable -y @ai-ml/nvidia-container-toolkit
+    dnf install -y nvidia-container-toolkit
+
     # Docker
     curl -o /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/fedora/docker-ce.repo
     dnf install -y docker-ce
+
+    curl -o /etc/yum.repos.d/gh-cli.repo https://cli.github.com/packages/rpm/gh-cli.repo
+    dnf install -y gh
 
     # Sunshine
     dnf copr enable -y lizardbyte/beta
@@ -56,8 +62,11 @@ RUN <<EORUN
     dnf copr -y enable claaj/typst
     dnf install -y typst
 
+    dnf copr enable -y luminoso/k9s
+    dnf install -y k9s
+
     # Misc
-    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu ripgrep pandoc
+    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu ripgrep pandoc nc
 
     rm -rf /var/cache/*
 EORUN
