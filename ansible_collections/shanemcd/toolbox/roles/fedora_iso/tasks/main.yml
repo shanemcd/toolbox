@@ -60,16 +60,17 @@
     - .containerignore
 
 - name: Build image for running mkksiso
-  community.docker.docker_image_build:
+  containers.podman.podman_image:
     name: quay.io/shanemcd/lorax
+    state: build
     path: "{{ build_context.path }}"
-    dockerfile: "Containerfile"
-    #force: "{{ fedora_iso_force }}"
+    force: "{{ fedora_iso_force }}"
 
 - name: Generate new ISO w/ our kickstart, unless the new image already exists
-  community.docker.docker_container:
+  containers.podman.podman_container:
     name: lorax
     recreate: true
+    remove: true
     detach: false
     image: quay.io/shanemcd/lorax
     privileged: true
