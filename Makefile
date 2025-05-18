@@ -4,7 +4,7 @@ MYBOX_VERSION ?= $(shell date "+%Y%m%d")
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
-ARCH := $(if $(filter $(UNAME_M),arm64 aarch64),aarch64,x86_64)
+ARCH := $(if $(filter $(UNAME_M),arm64 aarch64),aarch64,$(UNAME_M))
 
 QEMU_BIN ?= qemu-system-$(ARCH)
 
@@ -36,19 +36,34 @@ mybox: build-mybox
 
 .PHONY: build-mybox
 build-mybox:
-	podman build --pull=Always -t $(MYBOX_IMAGE):latest -t $(MYBOX_IMAGE):$(MYBOX_VERSION) mybox
+	podman build --pull=Always -t $(MYBOX_IMAGE):latest-$(ARCH) -t $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(ARCH) mybox
 
 .PHONY: push-mybox
 push-mybox: mybox
-	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)
-	podman push $(MYBOX_IMAGE):latest
+	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(ARCH)
+	podman push $(MYBOX_IMAGE):latest-$(ARCH)
+
+.PHONY: push-mybox-manifest
+push-mybox-manifest:
+	podman rmi $(MYBOX_IMAGE):latest
+
+	podman manifest create $(MYBOX_IMAGE):latest
+
+	podman manifest add $(MYBOX_IMAGE):latest \
+		docker://$(MYBOX_IMAGE):latest-x86_64
+
+	podman manifest add $(MYBOX_IMAGE):latest \
+		docker://$(MYBOX_IMAGE):latest-aarch64
+
+	podman manifest push --all $(MYBOX_IMAGE):latest \
+		docker://$(MYBOX_IMAGE):latest
 
 .PHONY: bootc-switch-mybox
 bootc-switch-mybox:
 	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION)
 
 .PHONY: update-mybox
-update-mybox: build-mybox push-mybox bootc-switch-mybox
+update-mybox: build-mybox push-mybox push-mybox-manifest bootc-switch-mybox
 
 vm-disk.qcow2:
 	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 20G
