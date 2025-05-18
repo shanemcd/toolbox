@@ -14,7 +14,7 @@ authselect --passalgo=sha512 --useshadow
 rootpw --lock
 user --name=shanemcd --groups=wheel --iscrypted --password={{ fedora_iso_kickstart_password | password_hash('sha512') }}
 
-ostreecontainer --url quay.io/shanemcd/mybox
+ostreecontainer --url quay.io/shanemcd/mybox:arm
 
 network --bootproto=dhcp --activate --hostname={{ fedora_iso_variant | lower }}
 services --enabled=sshd

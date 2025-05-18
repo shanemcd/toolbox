@@ -1,6 +1,36 @@
 MYBOX_IMAGE ?= quay.io/shanemcd/mybox
 MYBOX_VERSION ?= $(shell date "+%Y%m%d")
 
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
+
+ARCH := $(if $(filter $(UNAME_M),arm64 aarch64),aarch64,x86_64)
+
+QEMU_BIN ?= qemu-system-$(ARCH)
+
+ifeq ($(UNAME_S),Darwin)
+  QEMU_ACCEL ?= -accel hvf
+else ifeq ($(UNAME_S),Linux)
+  QEMU_ACCEL ?= -enable-kvm
+else
+  QEMU_ACCEL ?= -accel tcg
+endif
+
+ifeq ($(ARCH),aarch64)
+  QEMU_MACHINE ?= -machine virt,highmem=on -cpu host
+  QEMU_EXTRA_DEVICES ?= \
+    -bios /opt/homebrew/share/qemu/edk2-aarch64-code.fd \
+    -device qemu-xhci \
+    -device usb-kbd \
+    -device usb-tablet \
+    -device virtio-gpu-pci \
+    -device ramfb \
+    -device intel-hda
+else
+  QEMU_MACHINE ?=
+  QEMU_EXTRA_DEVICES ?=
+endif
+
 .PHONY: mybox
 mybox: build-mybox
 
@@ -8,7 +38,7 @@ mybox: build-mybox
 build-mybox:
 	podman build --pull=Always -t $(MYBOX_IMAGE):latest -t $(MYBOX_IMAGE):$(MYBOX_VERSION) mybox
 
-.PHONY: push--mybox
+.PHONY: push-mybox
 push-mybox: mybox
 	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)
 	podman push $(MYBOX_IMAGE):latest
@@ -23,17 +53,24 @@ update-mybox: build-mybox push-mybox bootc-switch-mybox
 vm-disk.qcow2:
 	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 20G
 
+.PHONY: qemu
 qemu: vm-disk.qcow2 context/custom.iso
-	qemu-system-x86_64 -enable-kvm \
+	@# First boot: install OS from ISO, boot from cdrom
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
 		-m 10000 \
 		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
 		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
-		-boot d -cdrom $(CURDIR)/context/custom.iso
+		-boot d \
+		-cdrom $(CURDIR)/context/custom.iso \
+		$(QEMU_EXTRA_DEVICES)
 
-	qemu-system-x86_64 -enable-kvm \
+	@# Second boot: boot from disk
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
 		-m 10000 \
 		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
-		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		$(QEMU_EXTRA_DEVICES)
+
 
 context:
 	mkdir -p $@
