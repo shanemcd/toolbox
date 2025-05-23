@@ -52,29 +52,37 @@ RUN <<EORUN
 EORUN
 
 RUN <<EORUN
-    # Docker
-    curl -o /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/fedora/docker-ce.repo
-    dnf install -y docker-ce
-
-    curl -o /etc/yum.repos.d/gh-cli.repo https://cli.github.com/packages/rpm/gh-cli.repo
-    dnf install -y gh
-
-    # Sunshine
-    dnf copr enable -y lizardbyte/beta
-    dnf install -y Sunshine
-
-    # Tailscale
+    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
+    dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
     dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
-    dnf install -y tailscale
+    dnf config-manager addrepo --from-repofile=https://github.com/terrapkg/subatomic-repos/raw/main/terra.repo
 
-    dnf copr -y enable claaj/typst
-    dnf install -y typst
+    # Need to install here before we install Zed down below
+    dnf install -y terra-release
 
+    dnf copr enable -y lizardbyte/beta
+    dnf copr enable -y claaj/typst
     dnf copr enable -y luminoso/k9s
-    dnf install -y k9s
 
-    # Misc
-    dnf install -y emacs zsh python-virtualenvwrapper fzf go-task etckeeper qemu-system-$(uname -m) qemu-ui-gtk ripgrep pandoc nc
+    dnf install -y \
+        Sunshine \
+        docker-ce \
+        emacs \
+        etckeeper \
+        fzf \
+        gh \
+        go-task \
+        k9s \
+        nc \
+        pandoc \
+        python-virtualenvwrapper \
+        qemu-system-$(uname -m) \
+        qemu-ui-gtk \
+        ripgrep \
+        tailscale \
+        typst \
+        zed \
+        zsh
 
     rm -rf /var/cache/*
 EORUN
