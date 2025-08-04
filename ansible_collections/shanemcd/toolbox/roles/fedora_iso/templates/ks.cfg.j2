@@ -4,7 +4,7 @@ keyboard dvorak
 lang en_US.UTF-8
 timezone America/New_York --utc
 
-bootloader --append="rd.driver.blacklist=nouveau modprobe.blacklist=nouveau nvidia-drm.modeset=1"
+bootloader --append="rd.driver.blacklist=nouveau modprobe.blacklist=nouveau modprobe.blacklist=nova_core nvidia-drm.modeset=1"
 
 ignoredisk --only-use=disk/by-id/{{ fedora_iso_target_disk_id }}
 clearpart --all --initlabel --disklabel=gpt
