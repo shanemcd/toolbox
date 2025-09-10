@@ -73,6 +73,8 @@ RUN <<EORUN
         gh \
         go-task \
         k9s \
+        krb5-devel \
+        krb5-workstation \
         nc \
         pandoc \
         python-virtualenvwrapper \
@@ -81,6 +83,7 @@ RUN <<EORUN
         qemu-ui-gtk \
         ripgrep \
         tailscale \
+        tmux \
         typst \
         zed \
         zsh
