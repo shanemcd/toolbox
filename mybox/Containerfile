@@ -60,12 +60,15 @@ RUN <<EORUN
     # Need to install here before we install Zed down below
     dnf install -y terra-release
 
+    dnf install -y https://api2.cursor.sh/updates/download/golden/linux-x64-rpm/cursor/1.7
+
     dnf copr enable -y lizardbyte/beta
     dnf copr enable -y claaj/typst
     dnf copr enable -y luminoso/k9s
 
     dnf install -y \
         Sunshine \
+        chromium \
         docker-ce \
         emacs \
         etckeeper \
@@ -77,6 +80,7 @@ RUN <<EORUN
         krb5-workstation \
         nc \
         pandoc \
+        python-devel \
         python-virtualenvwrapper \
         qemu-img \
         qemu-system-$(uname -m) \
