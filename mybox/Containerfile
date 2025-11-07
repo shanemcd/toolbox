@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora-kinoite:42
+FROM quay.io/fedora/fedora-kinoite:43
 
 RUN <<EORUN
     set -xeuo pipefail
