@@ -51,6 +51,9 @@ RUN <<EORUN
     dnf install -y nvidia-container-toolkit
 EORUN
 
+ADD install-cursor.sh /tmp/
+RUN bash /tmp/install-cursor.sh
+
 RUN <<EORUN
     dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
     dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
@@ -59,8 +62,6 @@ RUN <<EORUN
 
     # Need to install here before we install Zed down below
     dnf install -y terra-release
-
-    dnf install -y https://api2.cursor.sh/updates/download/golden/linux-x64-rpm/cursor/1.7
 
     dnf copr enable -y lizardbyte/beta
     dnf copr enable -y claaj/typst
