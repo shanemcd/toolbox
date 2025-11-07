@@ -79,11 +79,14 @@ RUN <<EORUN
         k9s \
         krb5-devel \
         krb5-workstation \
+        libvirt \
+        libvirt-daemon-kvm \
         nc \
         pandoc \
         python-devel \
         python-virtualenvwrapper \
         qemu-img \
+        qemu-kvm \
         qemu-system-$(uname -m) \
         qemu-ui-gtk \
         ripgrep \
