@@ -70,6 +70,7 @@ RUN <<EORUN
     dnf install -y \
         Sunshine \
         chromium \
+        cmake \
         docker-ce \
         emacs \
         etckeeper \
@@ -79,6 +80,7 @@ RUN <<EORUN
         k9s \
         krb5-devel \
         krb5-workstation \
+        libtool \
         libvirt \
         libvirt-daemon-kvm \
         nc \
@@ -96,5 +98,5 @@ RUN <<EORUN
         zed \
         zsh
 
-    rm -rf /var/cache/*
+    rm -rf /var/cache/* /tmp/*
 EORUN
