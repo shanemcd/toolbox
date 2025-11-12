@@ -135,19 +135,16 @@
             return 1
           }
 
-          wait_for_daemon_ready() {
+          wait_for_daemon_socket() {
             for i in $(seq 1 20); do
-              out=$("$tspath" status 2>&1)
-              rc=$?
-              if [ "$rc" -eq 0 ]; then
-                return 0
-              elif [ "$rc" -eq 1 ] && echo "$out" | grep -q "Logged out"; then
+              if [ -S /var/run/tailscale/tailscaled.sock ]; then
+                echo "$(date): tailscaled socket ready" >> $log
                 return 0
               fi
-              echo "$(date): tailscaled not ready (rc=$rc), output: $out" >> $log
+              echo "$(date): waiting for tailscaled socket..." >> $log
               sleep 1
             done
-            echo "$(date): tailscaled did not become responsive in time" >> $log
+            echo "$(date): tailscaled socket did not appear in time" >> $log
             return 1
           }
 
@@ -156,11 +153,10 @@
               wait_for_tun || exit 1
               wait_for_network || exit 1
               echo "$(date): Starting tailscaled..." >> $log
-              (
-                TS_DEBUG_FIREWALL_MODE=nftables "$tsdir/tailscaled" \
-                  -statedir /userdata/tailscale-state
-              ) >> $log 2>&1 &
-              wait_for_daemon_ready || exit 1
+              nohup env TS_DEBUG_FIREWALL_MODE=nftables "$tsdir/tailscaled" \
+                -statedir /userdata/tailscale-state \
+                >> $log 2>&1 </dev/null &
+              wait_for_daemon_socket || exit 1
               ;;
             stop)
               echo "$(date): Stopping tailscaled..." >> $log
@@ -174,6 +170,9 @@
 
     - name: Make init script executable
       raw: chmod 755 /etc/init.d/S22tailscale
+
+    - name: Remove existing state to ensure clean start
+      raw: rm -rf /userdata/tailscale-state
 
     - name: Start tailscaled
       raw: /etc/init.d/S22tailscale start
