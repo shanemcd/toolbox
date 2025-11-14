@@ -71,7 +71,7 @@ bootc-switch-mybox:
 update-mybox: build-mybox push-mybox push-mybox-manifest bootc-switch-mybox
 
 vm-disk.qcow2:
-	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 20G
+	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 100G
 
 .PHONY: qemu
 qemu: vm-disk.qcow2 context/custom.iso
