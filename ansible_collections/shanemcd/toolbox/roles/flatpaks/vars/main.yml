@@ -1,0 +1,22 @@
+---
+# List of flatpak applications to manage
+flatpaks:
+  - com.dec05eba.gpu_screen_recorder
+  - com.github.marktext.marktext
+  - com.github.rajsolai.textsnatcher
+  - com.github.tchx84.Flatseal
+  - com.github.wwmm.easyeffects
+  - com.google.Chrome
+  - com.jeffser.Alpaca
+  - com.raggesilver.BlackBox
+  - com.slack.Slack
+  - de.haeckerfelix.Shortwave
+  - hu.irl.cameractrls
+  - io.missioncenter.MissionCenter
+  - io.podman_desktop.PodmanDesktop
+  - md.obsidian.Obsidian
+  - org.gnome.Calculator
+  - org.gnome.gitlab.somas.Apostrophe
+  - org.kde.kweather
+  - org.videolan.VLC
+  - tv.kodi.Kodi

@@ -1,0 +1,14 @@
+---
+- name: Get currently installed flatpaks
+  command: flatpak list --app --columns=application
+  register: flatpaks_currently_installed
+  changed_when: false
+
+- name: Install flatpak applications
+  community.general.flatpak:
+    name: "{{ item }}"
+    state: present
+    method: "{{ flatpaks_method }}"
+    remote: "{{ flatpaks_remote }}"
+  loop: "{{ flatpaks }}"
+  when: item not in flatpaks_currently_installed.stdout_lines

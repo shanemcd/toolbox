@@ -1,0 +1,4 @@
+---
+# Flatpak installation defaults
+flatpaks_remote: flathub
+flatpaks_method: user

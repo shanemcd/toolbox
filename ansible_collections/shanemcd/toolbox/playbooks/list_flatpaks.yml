@@ -1,0 +1,15 @@
+---
+- name: List installed flatpak applications
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Get list of installed flatpak applications
+      command: flatpak list --app --columns=application
+      register: flatpaks_installed
+      changed_when: false
+
+    - name: Display installed flatpaks
+      debug:
+        msg: "{{ flatpaks_installed.stdout_lines | sort }}"

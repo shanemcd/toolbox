@@ -79,4 +79,28 @@ I test to make sure the thing can boot at all by doing this:
 
 ```
 $ make qemu
-``` 
+```
+
+## Flatpak Management
+
+Track and restore my flatpak applications.
+
+### List installed flatpaks
+
+```bash
+$ ansible-playbook shanemcd.toolbox.list_flatpaks
+```
+
+### Install flatpaks
+
+Installs all flatpaks defined in `roles/flatpaks/vars/main.yml`:
+
+```bash
+$ ansible-playbook shanemcd.toolbox.install_flatpaks
+```
+
+By default, flatpaks are installed at the user level from flathub. Override with:
+
+```bash
+$ ansible-playbook shanemcd.toolbox.install_flatpaks -e flatpaks_method=system
+```
