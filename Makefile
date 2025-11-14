@@ -108,7 +108,7 @@ virt-install: vm-disk.qcow2 context/custom.iso
 		--graphics spice \
 		--video qxl \
 		--channel spicevmc \
-		--boot uefi,cdrom,hd \
+		--boot uefi,hd,cdrom \
 		--noautoconsole
 
 .PHONY: virt-install-console
@@ -128,7 +128,7 @@ virt-install-console: vm-disk.qcow2 context/custom.iso
 		--graphics spice \
 		--video qxl \
 		--channel spicevmc \
-		--boot uefi,cdrom,hd
+		--boot uefi,hd,cdrom
 
 .PHONY: virt-destroy
 virt-destroy:
