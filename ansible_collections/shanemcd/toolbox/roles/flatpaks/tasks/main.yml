@@ -1,4 +1,11 @@
 ---
+- name: Add flathub remote
+  community.general.flatpak_remote:
+    name: "{{ flatpaks_remote }}"
+    state: present
+    flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+    method: "{{ flatpaks_method }}"
+
 - name: Get currently installed flatpaks
   command: flatpak list --app --columns=application
   register: flatpaks_currently_installed
