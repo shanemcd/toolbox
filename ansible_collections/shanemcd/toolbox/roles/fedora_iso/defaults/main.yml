@@ -11,3 +11,5 @@ fedora_iso_force: false
 fedora_releases_json_url: "https://getfedora.org/releases.json"
 fedora_iso_kickstart_shutdown_command: "reboot"
 container_runtime: "podman"  # Container runtime to use: "podman" or "docker"
+fedora_iso_ostree_image: "quay.io/shanemcd/mybox"
+fedora_iso_ostree_tag: "latest-{{ fedora_iso_arch_map[fedora_iso_architecture] }}"
