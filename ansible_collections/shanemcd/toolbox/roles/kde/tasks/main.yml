@@ -1,0 +1,43 @@
+---
+- name: Get current activity ID
+  ansible.builtin.command: kactivities-cli --list-activities
+  register: activities_output
+  changed_when: false
+
+- name: Extract activity ID
+  ansible.builtin.set_fact:
+    current_activity_id: "{{ activities_output.stdout | regex_search('[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}') }}"
+
+- name: Find kickoff instance numbers
+  ansible.builtin.shell: |
+    grep -oP 'Favorites-org\.kde\.plasma\.kickoff\.favorites\.instance-\K\d+' \
+    {{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc | sort -u
+  register: kickoff_instances
+  changed_when: false
+  failed_when: false
+
+- name: Set favorites ordering
+  ansible.builtin.set_fact:
+    favorites_ordering: "{{ kde_favorites | join(',') }}"
+
+- name: Update KDE favorites for each kickoff instance
+  ansible.builtin.ini_file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc"
+    section: "Favorites-org.kde.plasma.kickoff.favorites.instance-{{ item }}-global"
+    option: ordering
+    value: "{{ favorites_ordering }}"
+    mode: '0644'
+  loop: "{{ kickoff_instances.stdout_lines }}"
+  when: kickoff_instances.stdout_lines | length > 0
+
+- name: Update KDE favorites for current activity
+  ansible.builtin.ini_file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc"
+    section: "Favorites-org.kde.plasma.kickoff.favorites.instance-{{ item }}-{{ current_activity_id }}"
+    option: ordering
+    value: "{{ favorites_ordering }}"
+    mode: '0644'
+  loop: "{{ kickoff_instances.stdout_lines }}"
+  when:
+    - kickoff_instances.stdout_lines | length > 0
+    - current_activity_id is defined

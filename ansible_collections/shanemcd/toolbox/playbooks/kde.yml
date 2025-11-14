@@ -1,0 +1,5 @@
+---
+- name: Configure KDE settings
+  hosts: localhost
+  roles:
+    - kde

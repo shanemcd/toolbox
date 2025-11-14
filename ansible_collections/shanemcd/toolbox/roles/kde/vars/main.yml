@@ -1,0 +1,20 @@
+---
+# KDE Menu Favorites (in order)
+kde_favorites:
+  - preferred://browser
+  - applications:systemsettings.desktop
+  - applications:org.kde.dolphin.desktop
+  - applications:org.kde.kwrite.desktop
+  - applications:org.kde.konsole.desktop
+  - applications:org.kde.discover.desktop
+  - applications:hu.irl.cameractrls.desktop
+  - applications:org.kde.spectacle.desktop
+  - applications:org.gnome.gitlab.somas.Apostrophe.desktop
+  - applications:cursor.desktop
+  - applications:de.haeckerfelix.Shortwave.desktop
+  - applications:md.obsidian.Obsidian.desktop
+  - applications:emacs.desktop
+  - applications:com.slack.Slack.desktop
+  - applications:com.github.marktext.marktext.desktop
+  - applications:io.missioncenter.MissionCenter.desktop
+  - applications:virt-manager.desktop
