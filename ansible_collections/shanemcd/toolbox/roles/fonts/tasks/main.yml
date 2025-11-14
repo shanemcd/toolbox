@@ -1,0 +1,37 @@
+---
+- name: Get latest Iosevka release
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/be5invis/Iosevka/releases/latest
+    return_content: true
+  register: iosevka_release
+
+- name: Find PkgTTC-IosevkaSS05 asset
+  set_fact:
+    iosevka_ss05_asset: "{{ iosevka_release.json.assets | selectattr('name', 'match', '^PkgTTC-IosevkaSS05.*\\.zip$') | first }}"
+
+- name: Ensure fonts directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.local/share/fonts"
+    state: directory
+    mode: '0755'
+
+- name: Download Iosevka SS05 TTC package
+  ansible.builtin.get_url:
+    url: "{{ iosevka_ss05_asset.browser_download_url }}"
+    dest: "/tmp/{{ iosevka_ss05_asset.name }}"
+    mode: '0644'
+
+- name: Unpack Iosevka SS05 fonts
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ iosevka_ss05_asset.name }}"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.local/share/fonts"
+    remote_src: true
+
+- name: Clean up downloaded zip
+  ansible.builtin.file:
+    path: "/tmp/{{ iosevka_ss05_asset.name }}"
+    state: absent
+
+- name: Refresh font cache
+  ansible.builtin.command: fc-cache -f
+  changed_when: true

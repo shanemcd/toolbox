@@ -4,6 +4,14 @@ This project is mostly a collection of Ansible content used for provisioning my
 personal development environment. If you find something useful here, feel free
 to use it.
 
+## Running Ansible Playbooks
+
+All playbooks can be run using `uvx --from ansible-core ansible-playbook`:
+
+```bash
+$ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
+```
+
 ## Fedora Development Environment
 
 This is currently a bit of an experiment. In the past I used `packer` on my Mac

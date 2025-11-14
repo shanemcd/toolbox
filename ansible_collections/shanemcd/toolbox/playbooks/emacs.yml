@@ -1,0 +1,5 @@
+---
+- name: Run emacs role
+  hosts: localhost
+  roles:
+    - emacs

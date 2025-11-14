@@ -1,0 +1,10 @@
+---
+- name: Inception - full environment setup
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - shanemcd.toolbox.flatpaks
+    - shanemcd.toolbox.fonts
+    - shanemcd.toolbox.emacs

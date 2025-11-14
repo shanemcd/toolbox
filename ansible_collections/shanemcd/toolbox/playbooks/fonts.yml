@@ -1,0 +1,8 @@
+---
+- name: Install fonts
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - shanemcd.toolbox.fonts
