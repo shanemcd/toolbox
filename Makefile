@@ -1,5 +1,10 @@
 MYBOX_IMAGE ?= quay.io/shanemcd/mybox
 MYBOX_VERSION ?= $(shell date "+%Y%m%d")
+CONTAINER_RUNTIME ?= podman
+ANSIBLE_EXTRA_ARGS ?=
+VM_NAME ?= fedora-mybox
+VM_MEMORY ?= 10000
+VM_VCPUS ?= 4
 
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
@@ -86,6 +91,57 @@ qemu: vm-disk.qcow2 context/custom.iso
 		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
 		$(QEMU_EXTRA_DEVICES)
 
+.PHONY: virt-install
+virt-install: vm-disk.qcow2 context/custom.iso
+	@echo "Creating libvirt VM: $(VM_NAME)"
+	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME) --nvram"
+	@mkdir -p $(HOME)/.local/share/libvirt/images
+	@cp -f $(CURDIR)/context/custom.iso $(HOME)/.local/share/libvirt/images/custom.iso
+	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2
+	virt-install \
+		--name $(VM_NAME) \
+		--memory $(VM_MEMORY) \
+		--vcpus $(VM_VCPUS) \
+		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
+		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
+		--os-variant fedora-unknown \
+		--graphics spice \
+		--video qxl \
+		--channel spicevmc \
+		--boot uefi,cdrom,hd \
+		--noautoconsole
+
+.PHONY: virt-install-console
+virt-install-console: vm-disk.qcow2 context/custom.iso
+	@echo "Creating libvirt VM with console: $(VM_NAME)"
+	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME) --nvram"
+	@mkdir -p $(HOME)/.local/share/libvirt/images
+	@cp -f $(CURDIR)/context/custom.iso $(HOME)/.local/share/libvirt/images/custom.iso
+	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2
+	virt-install \
+		--name $(VM_NAME) \
+		--memory $(VM_MEMORY) \
+		--vcpus $(VM_VCPUS) \
+		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
+		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
+		--os-variant fedora-unknown \
+		--graphics spice \
+		--video qxl \
+		--channel spicevmc \
+		--boot uefi,cdrom,hd
+
+.PHONY: virt-destroy
+virt-destroy:
+	@echo "Destroying VM: $(VM_NAME)"
+	-virsh destroy $(VM_NAME)
+	-virsh undefine $(VM_NAME) --nvram
+	@echo "VM destroyed. Disk file preserved at: $(CURDIR)/vm-disk.qcow2"
+
+.PHONY: virt-start
+virt-start:
+	@echo "Starting VM: $(VM_NAME)"
+	virsh start $(VM_NAME)
+	virt-viewer $(VM_NAME) &
 
 context:
 	mkdir -p $@
@@ -96,4 +152,6 @@ context/custom.iso: context
 		-e fedora_iso_force=yes \
 		-e fedora_iso_kickstart_password=fortestingonly \
 		-e fedora_iso_target_disk_id=virtio-f1ce90 \
-		-e fedora_iso_kickstart_shutdown_command=poweroff
+		-e fedora_iso_kickstart_shutdown_command=poweroff \
+		-e container_runtime=$(CONTAINER_RUNTIME) \
+		$(ANSIBLE_EXTRA_ARGS)

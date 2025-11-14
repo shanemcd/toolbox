@@ -11,7 +11,7 @@
   ansible.builtin.file:
     path: "{{ fedora_iso_build_context }}"
     state: directory
-    mode: '0700'
+    mode: '0755'
   register: build_context
 
 - name: Generate shadow password for kickstart
@@ -49,24 +49,42 @@
     dest: "{{ build_context.path }}/ks.cfg"
     mode: '0600'
 
-- name: Copy Containerfile and sources to build context
+- name: Render Containerfile
+  ansible.builtin.template:
+    src: Containerfile.j2
+    dest: "{{ build_context.path }}/Containerfile"
+    mode: '0600'
+
+- name: Copy sources to build context
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ fedora_iso_build_context }}"
     mode: '0600'
   loop:
-    - Containerfile
     - start.sh
     - .containerignore
 
-- name: Build image for running mkksiso
+- name: Build image for running mkksiso (podman)
   containers.podman.podman_image:
     name: quay.io/shanemcd/lorax
     state: build
     path: "{{ build_context.path }}"
     force: "{{ fedora_iso_force }}"
+  become: true
+  when: container_runtime == "podman"
 
-- name: Generate new ISO w/ our kickstart, unless the new image already exists
+- name: Build image for running mkksiso (docker)
+  community.docker.docker_image:
+    name: quay.io/shanemcd/lorax
+    state: present
+    source: build
+    build:
+      path: "{{ build_context.path }}"
+      dockerfile: Containerfile
+    force_source: "{{ fedora_iso_force }}"
+  when: container_runtime == "docker"
+
+- name: Generate new ISO w/ our kickstart, unless the new image already exists (podman)
   containers.podman.podman_container:
     name: lorax
     recreate: true
@@ -74,9 +92,53 @@
     detach: false
     image: quay.io/shanemcd/lorax
     privileged: true
+    security_opt:
+      - label:disable
+    cap_add:
+      - SYS_ADMIN
+      - MKNOD
+    device:
+      - /dev/loop-control
     env:
       FEDORA_ISO_SRC: "/context/{{ fedora_iso_link | basename }}"
       FEDORA_ISO_DEST: "/context/{{ fedora_iso_with_kickstart | basename }}"
     volumes:
       - "{{ build_context.path }}/:/context:Z"
-  when: not fedora_iso_with_kickstart_result.stat.exists or fedora_iso_force
+  become: true
+  when: (not fedora_iso_with_kickstart_result.stat.exists or fedora_iso_force) and container_runtime == "podman"
+
+- name: Generate new ISO w/ our kickstart, unless the new image already exists (docker)
+  community.docker.docker_container:
+    name: lorax
+    state: started
+    recreate: true
+    cleanup: true
+    detach: false
+    image: quay.io/shanemcd/lorax
+    privileged: true
+    security_opts:
+      - label:disable
+    capabilities:
+      - SYS_ADMIN
+      - MKNOD
+    devices:
+      - /dev/loop-control:/dev/loop-control
+    env:
+      FEDORA_ISO_SRC: "/context/{{ fedora_iso_link | basename }}"
+      FEDORA_ISO_DEST: "/context/{{ fedora_iso_with_kickstart | basename }}"
+    volumes:
+      - "{{ build_context.path }}/:/context:Z"
+  when: (not fedora_iso_with_kickstart_result.stat.exists or fedora_iso_force) and container_runtime == "docker"
+
+- name: Check if generated ISO exists
+  ansible.builtin.stat:
+    path: "{{ fedora_iso_with_kickstart }}"
+  register: final_iso_stat
+
+- name: Fix ownership of generated ISO file
+  ansible.builtin.file:
+    path: "{{ fedora_iso_with_kickstart }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  become: true
+  when: final_iso_stat.stat.exists

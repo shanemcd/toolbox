@@ -14,29 +14,63 @@ use at home and work. I may write more at some point about how and why I am
 using an atomic desktop, but my main goal here is to document these things for
 my future self.
 
-### Produce custom ISO using Podman
+### Produce custom ISO
 
 This will discover the latest version of Fedora, download the Everything netinst
 ISO, inject a kickstart that will automate the provisioning of the machine. A
 random password will be generated and printed to the screen unless you pass `-e
 fedora_iso_kickstart_password=$KS_PASS`.
 
+#### Container Runtime Selection
+
+The ISO generation process supports both **Docker** and **Podman**. You can select the runtime using the `container_runtime` variable.
+
+**Recommended: Use Docker** - Works without sudo and provides full UEFI boot support:
+
 Dependencies:
-
-- `podman` (`dnf or brew install podman`)
+- `docker` (`dnf install docker` or see [Docker installation](https://docs.docker.com/engine/install/fedora/))
 - `ansible-core` (`pip install ansible-core`)
-- `containers.podman` (`ansible-galaxy collection install containers.podman`)
+- `community.docker` (`ansible-galaxy collection install community.docker`)
 - `passlib` (`pip install passlib`)
+- Python `requests` and `docker` libraries (`pip install requests docker`)
 
-From the root of this repo, run:
-
-```
+```bash
 $ ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
     -e fedora_iso_build_context=/home/shanemcd/Desktop/mybox \
     -e fedora_iso_force=yes \
     -e fedora_iso_kickstart_password=$MY_PASSWORD \
-    -e fedora_iso_target_disk_id=nvme-Samsung_SSD_990_PRO_2TB_... # found under /dev/disk/by-id/...
+    -e fedora_iso_target_disk_id=nvme-Samsung_SSD_990_PRO_2TB_... \
+    -e container_runtime=docker
 ```
+
+Or use the Makefile:
+```bash
+$ CONTAINER_RUNTIME=docker make context/custom.iso
+```
+
+**Alternative: Use Podman with sudo** - Requires password for privileged operations:
+
+Dependencies:
+- `podman` (`dnf install podman`)
+- `ansible-core` (`pip install ansible-core`)
+- `containers.podman` (`ansible-galaxy collection install containers.podman`)
+- `passlib` (`pip install passlib`)
+
+```bash
+$ ansible-playbook shanemcd.toolbox.make_fedora_iso -v -K \
+    -e fedora_iso_build_context=/home/shanemcd/Desktop/mybox \
+    -e fedora_iso_force=yes \
+    -e fedora_iso_kickstart_password=$MY_PASSWORD \
+    -e fedora_iso_target_disk_id=nvme-Samsung_SSD_990_PRO_2TB_... \
+    -e container_runtime=podman
+```
+
+Or via the Makefile:
+```bash
+$ ANSIBLE_EXTRA_ARGS="-K" make context/custom.iso
+```
+
+**Note:** The `-K` flag will prompt for your sudo password. This is required because `mkksiso` version 38.4+ needs root privileges to create fully bootable UEFI ISOs. Rootless Podman cannot access loop devices required for EFI boot image creation. See [CONTAINER_RUNTIME_ISSUE.md](CONTAINER_RUNTIME_ISSUE.md) for technical details.
 
 
 ### Testing (sorta)
