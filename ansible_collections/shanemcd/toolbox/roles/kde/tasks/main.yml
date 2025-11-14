@@ -27,6 +27,7 @@
     option: ordering
     value: "{{ favorites_ordering }}"
     mode: '0644'
+    no_extra_spaces: true
   loop: "{{ kickoff_instances.stdout_lines }}"
   when: kickoff_instances.stdout_lines | length > 0
 
@@ -37,6 +38,7 @@
     option: ordering
     value: "{{ favorites_ordering }}"
     mode: '0644'
+    no_extra_spaces: true
   loop: "{{ kickoff_instances.stdout_lines }}"
   when:
     - kickoff_instances.stdout_lines | length > 0
