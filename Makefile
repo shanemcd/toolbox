@@ -10,10 +10,23 @@ GPU_PASSTHROUGH ?= no
 # Append -gpu suffix to VM name if GPU passthrough is enabled
 ifeq ($(GPU_PASSTHROUGH),yes)
   VM_NAME_FULL := $(VM_NAME)-gpu
-  VIRT_INSTALL_HOSTDEV := --hostdev 0000:01:00.0 --hostdev 0000:01:00.1
+  # Auto-detect NVIDIA GPU PCI addresses
+  NVIDIA_VGA_ADDR := $(shell lspci -D | grep -i "NVIDIA" | grep -i "VGA" | awk '{print $$1}')
+  NVIDIA_AUDIO_ADDR := $(shell lspci -D | grep -i "NVIDIA" | grep -i "Audio" | awk '{print $$1}')
+  # Error if no NVIDIA GPU found
+  ifeq ($(NVIDIA_VGA_ADDR),)
+    $(error GPU_PASSTHROUGH=yes but no NVIDIA VGA device found. Check 'lspci | grep -i nvidia')
+  endif
+  VIRT_INSTALL_HOSTDEV := --hostdev $(NVIDIA_VGA_ADDR) $(if $(NVIDIA_AUDIO_ADDR),--hostdev $(NVIDIA_AUDIO_ADDR))
+  VIRT_INSTALL_BOOT := uefi,hd,cdrom,firmware.feature0.name=secure-boot,firmware.feature0.enabled=no
+  VIRT_INSTALL_GRAPHICS := spice
+  VIRT_INSTALL_VIDEO := qxl
 else
   VM_NAME_FULL := $(VM_NAME)
   VIRT_INSTALL_HOSTDEV :=
+  VIRT_INSTALL_BOOT := uefi,hd,cdrom
+  VIRT_INSTALL_GRAPHICS := spice
+  VIRT_INSTALL_VIDEO := qxl
 endif
 
 UNAME_S := $(shell uname -s)
@@ -106,22 +119,20 @@ virt-install: vm-disk.qcow2 context/custom.iso
 	@echo "Creating libvirt VM: $(VM_NAME_FULL)"
 	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
 	@mkdir -p $(HOME)/.local/share/libvirt/images
-	@cp -f $(CURDIR)/context/custom.iso $(HOME)/.local/share/libvirt/images/custom.iso
-	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2
-	virt-install \
-		--connect qemu:///system \
-		--name $(VM_NAME_FULL) \
-		--memory $(VM_MEMORY) \
-		--vcpus $(VM_VCPUS) \
-		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
-		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
-		--os-variant fedora-unknown \
-		--graphics spice \
-		--video qxl \
-		--channel spicevmc \
-		--boot uefi,hd,cdrom \
-		$(VIRT_INSTALL_HOSTDEV) \
-		--noautoconsole
+	ansible-playbook shanemcd.toolbox.virt_install \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=$(VM_MEMORY) \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
+		-e virt_install_disk_dest=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_iso_source=$(CURDIR)/context/custom.iso \
+		-e virt_install_iso_dest=$(HOME)/.local/share/libvirt/images/custom.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
 
 .PHONY: virt-install-console
 virt-install-console: vm-disk.qcow2 context/custom.iso
@@ -138,10 +149,9 @@ virt-install-console: vm-disk.qcow2 context/custom.iso
 		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
 		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
 		--os-variant fedora-unknown \
-		--graphics spice \
-		--video qxl \
-		--channel spicevmc \
-		--boot uefi,hd,cdrom \
+		$(VIRT_INSTALL_GRAPHICS) \
+		$(VIRT_INSTALL_VIDEO) \
+		$(VIRT_INSTALL_BOOT) \
 		$(VIRT_INSTALL_HOSTDEV)
 
 .PHONY: virt-destroy

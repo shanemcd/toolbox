@@ -1,0 +1,12 @@
+---
+virt_install_connection_uri: "qemu:///system"
+virt_install_vm_name: "fedora-mybox"
+virt_install_memory: 10000
+virt_install_vcpus: 4
+virt_install_disk_serial: "f1ce90"
+virt_install_os_variant: "fedora-unknown"
+virt_install_graphics: "spice"
+virt_install_video: "qxl"
+virt_install_boot: "uefi,hd,cdrom"
+virt_install_hostdev: ""
+virt_install_gpu_passthrough: false

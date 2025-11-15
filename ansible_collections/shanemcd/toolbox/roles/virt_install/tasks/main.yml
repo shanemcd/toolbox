@@ -1,0 +1,127 @@
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - virt_install_disk_source is defined
+      - virt_install_disk_dest is defined
+      - virt_install_iso_source is defined
+      - virt_install_iso_dest is defined
+      - virt_install_vm_name is defined
+    fail_msg: "Missing required virt_install variables"
+
+- name: Check if VM already exists
+  ansible.builtin.command:
+    cmd: "virsh -c {{ virt_install_connection_uri }} dominfo {{ virt_install_vm_name }}"
+  register: vm_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if VM already exists
+  ansible.builtin.fail:
+    msg: "VM {{ virt_install_vm_name }} already exists. Undefine it first with: virsh -c {{ virt_install_connection_uri }} undefine {{ virt_install_vm_name }} --nvram"
+  when: vm_check.rc == 0
+
+- name: Check if disk source exists
+  ansible.builtin.stat:
+    path: "{{ virt_install_disk_source }}"
+  register: disk_stat
+
+- name: Fail if disk source doesn't exist
+  ansible.builtin.fail:
+    msg: "Disk source {{ virt_install_disk_source }} does not exist"
+  when: not disk_stat.stat.exists
+
+- name: Check if ISO source exists
+  ansible.builtin.stat:
+    path: "{{ virt_install_iso_source }}"
+  register: iso_stat
+
+- name: Fail if ISO source doesn't exist
+  ansible.builtin.fail:
+    msg: "ISO source {{ virt_install_iso_source }} does not exist"
+  when: not iso_stat.stat.exists
+
+- name: Create destination directory
+  ansible.builtin.file:
+    path: "{{ virt_install_disk_dest | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy VM disk image
+  ansible.builtin.copy:
+    src: "{{ virt_install_disk_source }}"
+    dest: "{{ virt_install_disk_dest }}"
+    mode: '0644'
+    remote_src: true
+
+- name: Copy ISO image
+  ansible.builtin.copy:
+    src: "{{ virt_install_iso_source }}"
+    dest: "{{ virt_install_iso_dest }}"
+    mode: '0644'
+    remote_src: true
+
+- name: Build hostdev arguments for GPU passthrough
+  ansible.builtin.set_fact:
+    hostdev_args: >-
+      {% if virt_install_gpu_passthrough | default(false) | bool %}
+      --hostdev {{ virt_install_gpu_vga_addr }}
+      {% if virt_install_gpu_audio_addr | default('') %}
+      --hostdev {{ virt_install_gpu_audio_addr }}
+      {% endif %}
+      {% endif %}
+
+- name: Generate VM XML with virt-install
+  ansible.builtin.shell:
+    cmd: |
+      virt-install \
+        --connect {{ virt_install_connection_uri }} \
+        --name {{ virt_install_vm_name }} \
+        --memory {{ virt_install_memory }} \
+        --vcpus {{ virt_install_vcpus }} \
+        --disk path={{ virt_install_disk_dest }},format=qcow2,bus=virtio,serial={{ virt_install_disk_serial }} \
+        --disk {{ virt_install_iso_dest }},device=cdrom,bus=sata \
+        --os-variant {{ virt_install_os_variant }} \
+        --graphics {{ virt_install_graphics }} \
+        --video {{ virt_install_video }} \
+        --boot {{ virt_install_boot }} \
+        {{ hostdev_args }} \
+        --print-xml
+  register: vm_xml_output
+  changed_when: false
+  failed_when: vm_xml_output.rc != 0
+
+- name: Save VM XML to temp file
+  ansible.builtin.copy:
+    content: "{{ vm_xml_output.stdout }}"
+    dest: "/tmp/{{ virt_install_vm_name }}.xml"
+    mode: '0644'
+
+- name: Set hostdev managed='no' in XML for GPU passthrough
+  community.general.xml:
+    path: "/tmp/{{ virt_install_vm_name }}.xml"
+    xpath: "//hostdev[@mode='subsystem'][@type='pci']"
+    attribute: "managed"
+    value: "no"
+  when: virt_install_gpu_passthrough | default(false) | bool
+
+- name: Define VM from XML
+  ansible.builtin.command:
+    cmd: "virsh -c {{ virt_install_connection_uri }} define /tmp/{{ virt_install_vm_name }}.xml"
+  register: define_result
+  failed_when: define_result.rc != 0
+
+- name: Start VM
+  ansible.builtin.command:
+    cmd: "virsh -c {{ virt_install_connection_uri }} start {{ virt_install_vm_name }}"
+  register: start_result
+  failed_when: start_result.rc != 0
+
+- name: Clean up temp XML file
+  ansible.builtin.file:
+    path: "/tmp/{{ virt_install_vm_name }}.xml"
+    state: absent
+
+- name: Show success message
+  ansible.builtin.debug:
+    msg: "✓ VM {{ virt_install_vm_name }} created and started successfully"

@@ -1,0 +1,7 @@
+---
+- name: Create libvirt VM with virt-install
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - role: shanemcd.toolbox.virt_install
