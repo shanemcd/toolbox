@@ -1,0 +1,21 @@
+#!/bin/bash
+# Main libvirt hook script for QEMU VMs
+# This is called by libvirt when VM state changes
+
+GUEST_NAME="$1"
+OPERATION="$2"
+SUB_OPERATION="$3"
+
+# Only run GPU passthrough hooks for VMs with "-gpu" suffix
+if [[ "$GUEST_NAME" != *-gpu ]]; then
+    exit 0
+fi
+
+# Run scripts based on operation
+if [ "$OPERATION" == "prepare" ] && [ "$SUB_OPERATION" == "begin" ]; then
+    # VM is starting - unbind GPU from host
+    /etc/libvirt/hooks/vfio-startup.sh
+elif [ "$OPERATION" == "release" ] && [ "$SUB_OPERATION" == "end" ]; then
+    # VM has stopped - rebind GPU to host
+    /etc/libvirt/hooks/vfio-teardown.sh
+fi

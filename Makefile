@@ -5,6 +5,16 @@ ANSIBLE_EXTRA_ARGS ?=
 VM_NAME ?= fedora-mybox
 VM_MEMORY ?= 10000
 VM_VCPUS ?= 4
+GPU_PASSTHROUGH ?= no
+
+# Append -gpu suffix to VM name if GPU passthrough is enabled
+ifeq ($(GPU_PASSTHROUGH),yes)
+  VM_NAME_FULL := $(VM_NAME)-gpu
+  VIRT_INSTALL_HOSTDEV := --hostdev 0000:01:00.0 --hostdev 0000:01:00.1
+else
+  VM_NAME_FULL := $(VM_NAME)
+  VIRT_INSTALL_HOSTDEV :=
+endif
 
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
@@ -93,55 +103,59 @@ qemu: vm-disk.qcow2 context/custom.iso
 
 .PHONY: virt-install
 virt-install: vm-disk.qcow2 context/custom.iso
-	@echo "Creating libvirt VM: $(VM_NAME)"
-	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME) --nvram"
+	@echo "Creating libvirt VM: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
 	@mkdir -p $(HOME)/.local/share/libvirt/images
 	@cp -f $(CURDIR)/context/custom.iso $(HOME)/.local/share/libvirt/images/custom.iso
-	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2
+	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2
 	virt-install \
-		--name $(VM_NAME) \
+		--connect qemu:///system \
+		--name $(VM_NAME_FULL) \
 		--memory $(VM_MEMORY) \
 		--vcpus $(VM_VCPUS) \
-		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
+		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
 		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
 		--os-variant fedora-unknown \
 		--graphics spice \
 		--video qxl \
 		--channel spicevmc \
 		--boot uefi,hd,cdrom \
+		$(VIRT_INSTALL_HOSTDEV) \
 		--noautoconsole
 
 .PHONY: virt-install-console
 virt-install-console: vm-disk.qcow2 context/custom.iso
-	@echo "Creating libvirt VM with console: $(VM_NAME)"
-	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME) --nvram"
+	@echo "Creating libvirt VM with console: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME_FULL) --nvram"
 	@mkdir -p $(HOME)/.local/share/libvirt/images
 	@cp -f $(CURDIR)/context/custom.iso $(HOME)/.local/share/libvirt/images/custom.iso
-	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2
+	@cp -f $(CURDIR)/vm-disk.qcow2 $(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2
 	virt-install \
-		--name $(VM_NAME) \
+		--connect qemu:///system \
+		--name $(VM_NAME_FULL) \
 		--memory $(VM_MEMORY) \
 		--vcpus $(VM_VCPUS) \
-		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
+		--disk path=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
 		--disk $(HOME)/.local/share/libvirt/images/custom.iso,device=cdrom,bus=sata \
 		--os-variant fedora-unknown \
 		--graphics spice \
 		--video qxl \
 		--channel spicevmc \
-		--boot uefi,hd,cdrom
+		--boot uefi,hd,cdrom \
+		$(VIRT_INSTALL_HOSTDEV)
 
 .PHONY: virt-destroy
 virt-destroy:
-	@echo "Destroying VM: $(VM_NAME)"
-	-virsh destroy $(VM_NAME)
-	-virsh undefine $(VM_NAME) --nvram
+	@echo "Destroying VM: $(VM_NAME_FULL)"
+	-virsh -c qemu:///system destroy $(VM_NAME_FULL)
+	-virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram
 	@echo "VM destroyed. Disk file preserved at: $(CURDIR)/vm-disk.qcow2"
 
 .PHONY: virt-start
 virt-start:
-	@echo "Starting VM: $(VM_NAME)"
-	virsh start $(VM_NAME)
-	virt-viewer $(VM_NAME) &
+	@echo "Starting VM: $(VM_NAME_FULL)"
+	virsh -c qemu:///system start $(VM_NAME_FULL)
+	virt-viewer -c qemu:///system $(VM_NAME_FULL) &
 
 context:
 	mkdir -p $@

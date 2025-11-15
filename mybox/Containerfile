@@ -97,6 +97,8 @@ RUN <<EORUN
         tailscale \
         tmux \
         typst \
+        uv \
+        virt-install \
         virt-manager \
         zed \
         zsh
