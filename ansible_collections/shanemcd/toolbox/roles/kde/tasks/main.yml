@@ -1,45 +1,44 @@
 ---
-- name: Get current activity ID
-  ansible.builtin.command: kactivities-cli --list-activities
-  register: activities_output
-  changed_when: false
-
-- name: Extract activity ID
-  ansible.builtin.set_fact:
-    current_activity_id: "{{ activities_output.stdout | regex_search('[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}') }}"
-
-- name: Find kickoff instance numbers
+- name: Get current favorites from D-Bus
   ansible.builtin.shell: |
-    grep -oP 'Favorites-org\.kde\.plasma\.kickoff\.favorites\.instance-\K\d+' \
-    {{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc | sort -u
-  register: kickoff_instances
+    qdbus-qt6 org.kde.ActivityManager /ActivityManager/Resources/Linking \
+      org.kde.ActivityManager.ResourcesLinking.IsResourceLinkedToActivity \
+      "org.kde.plasma.favorites.applications" "{{ item }}"
+  loop: "{{ kde_favorites }}"
+  register: current_favorites
   changed_when: false
   failed_when: false
 
-- name: Set favorites ordering
-  ansible.builtin.set_fact:
-    favorites_ordering: "{{ kde_favorites | join(',') }}"
+- name: Add missing favorites via D-Bus
+  ansible.builtin.command:
+    cmd: >
+      dbus-send --type=method_call
+      --dest=org.kde.ActivityManager
+      /ActivityManager/Resources/Linking
+      org.kde.ActivityManager.ResourcesLinking.LinkResourceToActivity
+      string:"org.kde.plasma.favorites.applications"
+      string:"{{ item.item }}"
+  loop: "{{ current_favorites.results }}"
+  when: item.stdout == "false"
+  changed_when: true
 
-- name: Update KDE favorites for each kickoff instance
-  ansible.builtin.ini_file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc"
-    section: "Favorites-org.kde.plasma.kickoff.favorites.instance-{{ item }}-global"
-    option: ordering
-    value: "{{ favorites_ordering }}"
-    mode: '0644'
-    no_extra_spaces: true
-  loop: "{{ kickoff_instances.stdout_lines }}"
-  when: kickoff_instances.stdout_lines | length > 0
+- name: Get all currently linked resources
+  ansible.builtin.shell: |
+    sqlite3 {{ ansible_facts['env']['HOME'] }}/.local/share/kactivitymanagerd/resources/database \
+      "SELECT targettedResource FROM ResourceLink
+       WHERE initiatingAgent='org.kde.plasma.favorites.applications';"
+  register: all_linked
+  changed_when: false
 
-- name: Update KDE favorites for current activity
-  ansible.builtin.ini_file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/kactivitymanagerd-statsrc"
-    section: "Favorites-org.kde.plasma.kickoff.favorites.instance-{{ item }}-{{ current_activity_id }}"
-    option: ordering
-    value: "{{ favorites_ordering }}"
-    mode: '0644'
-    no_extra_spaces: true
-  loop: "{{ kickoff_instances.stdout_lines }}"
-  when:
-    - kickoff_instances.stdout_lines | length > 0
-    - current_activity_id is defined
+- name: Remove favorites not in our list
+  ansible.builtin.command:
+    cmd: >
+      dbus-send --type=method_call
+      --dest=org.kde.ActivityManager
+      /ActivityManager/Resources/Linking
+      org.kde.ActivityManager.ResourcesLinking.UnlinkResourceFromActivity
+      string:"org.kde.plasma.favorites.applications"
+      string:"{{ item }}"
+  loop: "{{ all_linked.stdout_lines }}"
+  when: item not in kde_favorites
+  changed_when: true

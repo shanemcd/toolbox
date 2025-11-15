@@ -91,7 +91,9 @@ RUN <<EORUN
         qemu-kvm \
         qemu-system-$(uname -m) \
         qemu-ui-gtk \
+        qt6-qttools \
         ripgrep \
+        sqlite \
         tailscale \
         tmux \
         typst \
