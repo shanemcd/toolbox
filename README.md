@@ -1,114 +1,138 @@
 # Shane's Toolbox Ansible Collection
 
-This project is mostly a collection of Ansible content used for provisioning my
-personal development environment. If you find something useful here, feel free
-to use it.
+An Ansible collection for provisioning my personal development environment, including automated Fedora installations, desktop configuration, and application management.
 
-## Running Ansible Playbooks
+## Quick Start
 
 All playbooks can be run using `uvx --from ansible-core ansible-playbook`:
 
 ```bash
-$ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
+uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 ```
 
-## Fedora Development Environment
+## Available Playbooks
 
-This is currently a bit of an experiment. In the past I used `packer` on my Mac
-to produce customized Fedora VMs that would run under VMware Fusion. Here, I am
-trying to produce an ISO that I can use to perform unattended (automated)
-installations of my personal desktop environment on the various machines that I
-use at home and work. I may write more at some point about how and why I am
-using an atomic desktop, but my main goal here is to document these things for
-my future self.
+### System Provisioning
 
-### Produce custom ISO
+#### `make_fedora_iso`
+Generate a custom Fedora ISO with kickstart for unattended installations. Downloads the latest Fedora Everything netinst ISO, injects a kickstart configuration, and produces a bootable ISO that installs a Fedora Kinoite system using the bootc container image from `mybox/Containerfile`.
 
-This will discover the latest version of Fedora, download the Everything netinst
-ISO, inject a kickstart that will automate the provisioning of the machine. A
-random password will be generated and printed to the screen unless you pass `-e
-fedora_iso_kickstart_password=$KS_PASS`.
+**Using Docker (recommended - no sudo required):**
+```bash
+CONTAINER_RUNTIME=docker make context/custom.iso
+```
 
-#### Container Runtime Selection
+**Using Podman (requires sudo):**
+```bash
+ANSIBLE_EXTRA_ARGS="-K" make context/custom.iso
+```
 
-The ISO generation process supports both **Docker** and **Podman**. You can select the runtime using the `container_runtime` variable.
+**Custom parameters:**
+```bash
+ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
+  -e fedora_iso_build_context=/path/to/context \
+  -e fedora_iso_force=yes \
+  -e fedora_iso_kickstart_password=$PASSWORD \
+  -e fedora_iso_target_disk_id=nvme-Samsung_SSD_... \
+  -e container_runtime=docker
+```
 
-**Recommended: Use Docker** - Works without sudo and provides full UEFI boot support:
+**Dependencies:**
+- Docker: `docker`, `ansible-core`, `community.docker` collection, Python `passlib`, `requests`, `docker`
+- Podman: `podman`, `ansible-core`, `containers.podman` collection, Python `passlib`
 
-Dependencies:
-- `docker` (`dnf install docker` or see [Docker installation](https://docs.docker.com/engine/install/fedora/))
-- `ansible-core` (`pip install ansible-core`)
-- `community.docker` (`ansible-galaxy collection install community.docker`)
-- `passlib` (`pip install passlib`)
-- Python `requests` and `docker` libraries (`pip install requests docker`)
+**Testing the ISO:**
+```bash
+make qemu  # Boot ISO in QEMU, install, then reboot to test
+```
+
+**Note:** Podman requires sudo (`-K`) because `mkksiso` 38.4+ needs root privileges to create UEFI boot images. Rootless Podman cannot access the loop devices required for EFI boot image creation.
+
+#### `inception`
+Meta-playbook that runs a full environment setup: installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
 
 ```bash
-$ ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
-    -e fedora_iso_build_context=/home/shanemcd/Desktop/mybox \
-    -e fedora_iso_force=yes \
-    -e fedora_iso_kickstart_password=$MY_PASSWORD \
-    -e fedora_iso_target_disk_id=nvme-Samsung_SSD_990_PRO_2TB_... \
-    -e container_runtime=docker
+ansible-playbook shanemcd.toolbox.inception
 ```
 
-Or use the Makefile:
-```bash
-$ CONTAINER_RUNTIME=docker make context/custom.iso
-```
+### Desktop Configuration
 
-**Alternative: Use Podman with sudo** - Requires password for privileged operations:
-
-Dependencies:
-- `podman` (`dnf install podman`)
-- `ansible-core` (`pip install ansible-core`)
-- `containers.podman` (`ansible-galaxy collection install containers.podman`)
-- `passlib` (`pip install passlib`)
+#### `kde`
+Configure KDE Plasma application menu favorites using the official D-Bus API. Favorites are defined in `roles/kde/vars/main.yml`.
 
 ```bash
-$ ansible-playbook shanemcd.toolbox.make_fedora_iso -v -K \
-    -e fedora_iso_build_context=/home/shanemcd/Desktop/mybox \
-    -e fedora_iso_force=yes \
-    -e fedora_iso_kickstart_password=$MY_PASSWORD \
-    -e fedora_iso_target_disk_id=nvme-Samsung_SSD_990_PRO_2TB_... \
-    -e container_runtime=podman
+ansible-playbook shanemcd.toolbox.kde
 ```
 
-Or via the Makefile:
-```bash
-$ ANSIBLE_EXTRA_ARGS="-K" make context/custom.iso
-```
+**How it works:** Uses `org.kde.ActivityManager.ResourcesLinking` D-Bus interface to add/remove favorites. This is the proper, supported method that works during active Plasma sessions and lets KDE handle all database synchronization.
 
-**Note:** The `-K` flag will prompt for your sudo password. This is required because `mkksiso` version 38.4+ needs root privileges to create fully bootable UEFI ISOs. Rootless Podman cannot access loop devices required for EFI boot image creation. See [CONTAINER_RUNTIME_ISSUE.md](CONTAINER_RUNTIME_ISSUE.md) for technical details.
-
-
-### Testing (sorta)
-
-I test to make sure the thing can boot at all by doing this:
-
-```
-$ make qemu
-```
-
-## Flatpak Management
-
-Track and restore my flatpak applications.
-
-### List installed flatpaks
+#### `flatpaks`
+Install flatpak applications defined in `roles/flatpaks/vars/main.yml`.
 
 ```bash
-$ ansible-playbook shanemcd.toolbox.list_flatpaks
+ansible-playbook shanemcd.toolbox.install_flatpaks
+
+# Install at system level instead of user level
+ansible-playbook shanemcd.toolbox.install_flatpaks -e flatpaks_method=system
 ```
 
-### Install flatpaks
+List currently installed flatpaks:
+```bash
+ansible-playbook shanemcd.toolbox.list_flatpaks
+```
 
-Installs all flatpaks defined in `roles/flatpaks/vars/main.yml`:
+#### `fonts`
+Download and install Iosevka SS05 font from the latest GitHub release.
 
 ```bash
-$ ansible-playbook shanemcd.toolbox.install_flatpaks
+ansible-playbook shanemcd.toolbox.fonts
 ```
 
-By default, flatpaks are installed at the user level from flathub. Override with:
+#### `emacs`
+Clone `.emacs.d` repository and configure Emacs with packages, vterm compilation, and nerd-icons fonts.
 
 ```bash
-$ ansible-playbook shanemcd.toolbox.install_flatpaks -e flatpaks_method=system
+ansible-playbook shanemcd.toolbox.emacs
 ```
+
+**What it does:**
+1. Clones `https://github.com/shanemcd/.emacs.d`
+2. Runs Emacs in batch mode with `vterm-always-compile-module=t` to auto-compile vterm
+3. Loads init.el (which runs org-babel to load configuration)
+4. Installs nerd-icons fonts non-interactively
+
+### Remote/Specialized Systems
+
+#### `authorized_keys`
+Populate SSH authorized_keys from GitHub user public keys.
+
+```bash
+ansible-playbook shanemcd.toolbox.authorized_keys \
+  -i inventory.ini \
+  -e github_users=['shanemcd','otheruser'] \
+  -e remote_user=root
+```
+
+**Options:**
+- `github_users` - List of GitHub usernames to fetch keys from
+- `remote_user` - User account to configure (default: `root`)
+- `clear_existing` - Set to `true` to wipe existing authorized_keys first
+
+#### `jetkvm_tailscale`
+Install and configure Tailscale on JetKVM devices (Rockchip-based KVM over IP hardware).
+
+```bash
+ansible-playbook shanemcd.toolbox.jetkvm_tailscale \
+  -i jetkvm-inventory \
+  -e tailscale_auth_key=$TSKEY
+```
+
+**Requirements:**
+- Target must be a JetKVM device (detects Rockchip in `/proc/cpuinfo`)
+- Tailscale auth key from https://login.tailscale.com/admin/settings/keys
+
+**What it does:**
+1. Downloads latest Tailscale ARM release
+2. Installs tailscaled daemon with init script (`S22tailscale`)
+3. Configures persistent state in `/userdata/tailscale-state`
+4. Authenticates using provided auth key
