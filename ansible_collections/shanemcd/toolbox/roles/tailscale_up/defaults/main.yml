@@ -1,0 +1,30 @@
+---
+# Default variables for tailscale_up role
+
+# Tailscale auth key (required - must be provided at runtime or via vars)
+tailscale_auth_key: ""
+
+# Advertise tags to apply to this node
+# Example: "tag:server,tag:prod"
+tailscale_advertise_tags: ""
+
+# Accept routes from other nodes
+tailscale_accept_routes: false
+
+# Accept DNS configuration from tailnet
+tailscale_accept_dns: true
+
+# Advertise this node as an exit node
+tailscale_advertise_exit_node: false
+
+# SSH server - enable Tailscale SSH
+tailscale_ssh: false
+
+# Hostname to use on the tailnet (defaults to system hostname)
+tailscale_hostname: ""
+
+# Additional arguments to pass to tailscale up
+tailscale_extra_args: ""
+
+# Whether to validate the auth key is provided
+tailscale_validate_auth_key: true

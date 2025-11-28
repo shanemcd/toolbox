@@ -1,0 +1,78 @@
+---
+# Tasks for tailscale_up role - Configure Tailscale and join tailnet
+
+- name: Validate auth key is provided
+  ansible.builtin.assert:
+    that:
+      - tailscale_auth_key is defined
+      - tailscale_auth_key | length > 0
+    fail_msg: "tailscale_auth_key must be provided. Generate one at https://login.tailscale.com/admin/settings/keys"
+    success_msg: "Auth key provided"
+  when: tailscale_validate_auth_key | default(true) | bool
+
+- name: Enable and start tailscaled service
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true
+    state: started
+  become: true
+
+- name: Check if already connected to Tailscale
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Parse Tailscale status
+  ansible.builtin.set_fact:
+    tailscale_backend_state: "{{ (tailscale_status.stdout | from_json).BackendState | default('') }}"
+  when: tailscale_status.rc == 0
+
+- name: Build tailscale up command
+  ansible.builtin.set_fact:
+    tailscale_up_cmd: >-
+      tailscale up
+      --auth-key={{ tailscale_auth_key }}
+      {% if tailscale_advertise_tags | default('') | length > 0 %}
+      --advertise-tags={{ tailscale_advertise_tags }}
+      {% endif %}
+      {% if tailscale_accept_routes | default(false) | bool %}
+      --accept-routes
+      {% endif %}
+      {% if not (tailscale_accept_dns | default(true) | bool) %}
+      --accept-dns=false
+      {% endif %}
+      {% if tailscale_advertise_exit_node | default(false) | bool %}
+      --advertise-exit-node
+      {% endif %}
+      {% if tailscale_ssh | default(false) | bool %}
+      --ssh
+      {% endif %}
+      {% if tailscale_hostname | default('') | length > 0 %}
+      --hostname={{ tailscale_hostname }}
+      {% endif %}
+      {{ tailscale_extra_args | default('') }}
+  when: tailscale_backend_state | default('') != 'Running'
+
+- name: Connect to Tailscale
+  ansible.builtin.command: "{{ tailscale_up_cmd }}"
+  become: true
+  when: tailscale_backend_state | default('') != 'Running'
+  no_log: true  # Don't log the auth key
+  register: tailscale_up_result
+
+- name: Display connection result
+  ansible.builtin.debug:
+    msg: "Successfully connected to Tailscale"
+  when:
+    - tailscale_up_result is defined
+    - tailscale_up_result.changed
+
+- name: Get Tailscale status
+  ansible.builtin.command: tailscale status
+  register: final_status
+  changed_when: false
+
+- name: Display Tailscale status
+  ansible.builtin.debug:
+    var: final_status.stdout_lines

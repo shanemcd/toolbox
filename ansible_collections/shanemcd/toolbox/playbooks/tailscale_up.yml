@@ -1,0 +1,8 @@
+---
+# Playbook to install Tailscale and join the tailnet
+# Usage: uvx --from ansible-core ansible-playbook shanemcd.toolbox.tailscale_up -e tailscale_auth_key=tskey-auth-... -i inventory
+
+- name: Install and configure Tailscale
+  hosts: all
+  roles:
+    - shanemcd.toolbox.tailscale_up
