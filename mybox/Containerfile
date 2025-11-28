@@ -71,6 +71,11 @@ RUN <<EORUN
         Sunshine \
         chromium \
         cmake \
+        cockpit \
+        cockpit-machines \
+        cockpit-networkmanager \
+        cockpit-podman \
+        cockpit-storaged \
         docker-ce \
         emacs \
         etckeeper \
@@ -127,4 +132,7 @@ XKBCONF
 
     # Set timezone
     ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+
+    # Enable cockpit socket
+    systemctl enable cockpit.socket
 EORUN
