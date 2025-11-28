@@ -1,0 +1,40 @@
+name: Build Container Images
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-kinoite:
+    name: Build Kinoite Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary packages to free up space
+          sudo apt-get clean
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          df -h
+
+      - name: Build Kinoite image
+        run: make build-mybox-kinoite
+
+      - name: Show image info
+        run: |
+          podman images | grep mybox
+
+      - name: Save image size info
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Kinoite Image" >> $GITHUB_STEP_SUMMARY
+          podman images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.Created}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
