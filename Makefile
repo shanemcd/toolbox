@@ -8,6 +8,20 @@ VM_VCPUS ?= 4
 GPU_PASSTHROUGH ?= no
 BOOTC_USE_ALL_DISKS ?= no
 
+# Desktop environment selection
+DESKTOP ?= kinoite
+FEDORA_VERSION ?= 43
+BASE_IMAGE_KINOITE := quay.io/fedora/fedora-kinoite:$(FEDORA_VERSION)
+BASE_IMAGE_SILVERBLUE := quay.io/fedora/fedora-silverblue:$(FEDORA_VERSION)
+
+ifeq ($(DESKTOP),silverblue)
+  BASE_IMAGE := $(BASE_IMAGE_SILVERBLUE)
+  DESKTOP_SUFFIX := -silverblue
+else
+  BASE_IMAGE := $(BASE_IMAGE_KINOITE)
+  DESKTOP_SUFFIX := -kinoite
+endif
+
 # Append -gpu suffix to VM name if GPU passthrough is enabled
 ifeq ($(GPU_PASSTHROUGH),yes)
   VM_NAME_FULL := $(VM_NAME)-gpu
@@ -65,43 +79,96 @@ mybox: build-mybox
 
 .PHONY: build-mybox
 build-mybox:
-	podman build --pull=Always -t $(MYBOX_IMAGE):latest-$(ARCH) -t $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(ARCH) mybox
+	podman build --pull=Always \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) \
+		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH) \
+		mybox
 
-context/mybox-$(ARCH).tar: $(shell find mybox -type f)
-	$(MAKE) mybox
+.PHONY: build-mybox-kinoite
+build-mybox-kinoite:
+	$(MAKE) build-mybox DESKTOP=kinoite
+
+.PHONY: build-mybox-silverblue
+build-mybox-silverblue:
+	$(MAKE) build-mybox DESKTOP=silverblue
+
+.PHONY: build-mybox-both
+build-mybox-both: build-mybox-kinoite build-mybox-silverblue
+
+context/mybox-$(DESKTOP)-$(ARCH).tar: $(shell find mybox -type f)
+	$(MAKE) mybox DESKTOP=$(DESKTOP)
 	@mkdir -p context
-	podman save $(MYBOX_IMAGE):latest-$(ARCH) -o $@ --format oci-archive
+	podman save $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) -o $@ --format oci-archive
 	@echo "Container archive saved to $@"
 
 .PHONY: mybox-archive
-mybox-archive: context/mybox-$(ARCH).tar
+mybox-archive: context/mybox-$(DESKTOP)-$(ARCH).tar
+
+.PHONY: mybox-archive-kinoite
+mybox-archive-kinoite:
+	$(MAKE) mybox-archive DESKTOP=kinoite
+
+.PHONY: mybox-archive-silverblue
+mybox-archive-silverblue:
+	$(MAKE) mybox-archive DESKTOP=silverblue
 
 .PHONY: push-mybox
 push-mybox: mybox
-	podman push $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(ARCH)
-	podman push $(MYBOX_IMAGE):latest-$(ARCH)
+	podman push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH)
+	podman push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH)
+
+.PHONY: push-mybox-kinoite
+push-mybox-kinoite:
+	$(MAKE) push-mybox DESKTOP=kinoite
+
+.PHONY: push-mybox-silverblue
+push-mybox-silverblue:
+	$(MAKE) push-mybox DESKTOP=silverblue
+
+.PHONY: push-mybox-both
+push-mybox-both: push-mybox-kinoite push-mybox-silverblue
 
 .PHONY: push-mybox-manifest
 push-mybox-manifest:
-	podman rmi $(MYBOX_IMAGE):latest
+	-podman rmi $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
 
-	podman manifest create $(MYBOX_IMAGE):latest
+	podman manifest create $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
 
-	podman manifest add $(MYBOX_IMAGE):latest \
-		docker://$(MYBOX_IMAGE):latest-x86_64
+	podman manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-x86_64
 
-	podman manifest add $(MYBOX_IMAGE):latest \
-		docker://$(MYBOX_IMAGE):latest-aarch64
+	podman manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-aarch64
 
-	podman manifest push --all $(MYBOX_IMAGE):latest \
-		docker://$(MYBOX_IMAGE):latest
+	podman manifest push --all $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+
+.PHONY: push-mybox-manifest-kinoite
+push-mybox-manifest-kinoite:
+	$(MAKE) push-mybox-manifest DESKTOP=kinoite
+
+.PHONY: push-mybox-manifest-silverblue
+push-mybox-manifest-silverblue:
+	$(MAKE) push-mybox-manifest DESKTOP=silverblue
+
+.PHONY: push-mybox-manifest-both
+push-mybox-manifest-both: push-mybox-manifest-kinoite push-mybox-manifest-silverblue
 
 .PHONY: bootc-switch-mybox
 bootc-switch-mybox:
-	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION)
+	sudo bootc switch $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)
 
 .PHONY: update-mybox
 update-mybox: build-mybox push-mybox push-mybox-manifest bootc-switch-mybox
+
+.PHONY: update-mybox-kinoite
+update-mybox-kinoite:
+	$(MAKE) update-mybox DESKTOP=kinoite
+
+.PHONY: update-mybox-silverblue
+update-mybox-silverblue:
+	$(MAKE) update-mybox DESKTOP=silverblue
 
 vm-disk.qcow2:
 	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 100G
@@ -210,7 +277,7 @@ context/custom.iso: context
 		-e container_runtime=$(CONTAINER_RUNTIME) \
 		$(ANSIBLE_EXTRA_ARGS)
 
-context/custom-embedded.iso: context context/mybox-$(ARCH).tar
+context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 	ansible-playbook shanemcd.toolbox.make_fedora_iso -v -K \
 		-e fedora_iso_build_context=$(CURDIR)/context \
 		-e fedora_iso_output_filename=custom-embedded.iso \
@@ -220,7 +287,7 @@ context/custom-embedded.iso: context context/mybox-$(ARCH).tar
 		-e fedora_iso_kickstart_shutdown_command=poweroff \
 		-e container_runtime=$(CONTAINER_RUNTIME) \
 		-e fedora_iso_embed_container=yes \
-		-e fedora_iso_container_archive=mybox-$(ARCH).tar \
+		-e fedora_iso_container_archive=mybox-$(DESKTOP)-$(ARCH).tar \
 		$(ANSIBLE_EXTRA_ARGS)
 
 # bootc-image-builder based ISO generation

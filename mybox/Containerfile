@@ -1,4 +1,5 @@
-FROM quay.io/fedora/fedora-kinoite:43
+ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:43
+FROM ${BASE_IMAGE}
 
 RUN <<EORUN
     set -xeuo pipefail
