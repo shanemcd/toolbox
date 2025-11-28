@@ -106,3 +106,25 @@ RUN <<EORUN
 
     rm -rf /var/cache/* /tmp/*
 EORUN
+
+RUN <<EORUN
+    # Set dvorak keyboard layout for console
+    echo 'KEYMAP=dvorak' > /etc/vconsole.conf
+
+    # Set dvorak for X11/Wayland (KDE uses this)
+    mkdir -p /etc/X11/xorg.conf.d
+    cat > /etc/X11/xorg.conf.d/00-keyboard.conf <<'XKBCONF'
+Section "InputClass"
+        Identifier "system-keyboard"
+        MatchIsKeyboard "on"
+        Option "XkbLayout" "us"
+        Option "XkbVariant" "dvorak"
+EndSection
+XKBCONF
+
+    # Set locale
+    echo 'LANG=en_US.UTF-8' > /etc/locale.conf
+
+    # Set timezone
+    ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+EORUN
