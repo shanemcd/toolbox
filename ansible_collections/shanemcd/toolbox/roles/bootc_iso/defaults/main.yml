@@ -1,0 +1,43 @@
+---
+# bootc-image-builder configuration
+
+# Container image to embed in the ISO
+bootc_iso_image: "quay.io/shanemcd/mybox"
+bootc_iso_tag: "latest-{{ ansible_architecture }}"
+
+# Output configuration (should be overridden via -e, e.g., -e bootc_iso_build_context=/path/to/output)
+bootc_iso_build_context: "{{ undef(hint='bootc_iso_build_context must be provided') }}"
+bootc_iso_output_filename: "install.iso"
+bootc_iso_rootfs: "xfs"
+
+# Force rebuild even if ISO exists
+bootc_iso_force: false
+
+# Installer mode: "graphical" or "text --non-interactive"
+bootc_iso_installer_mode: "graphical"
+
+# System configuration (for kickstart)
+bootc_iso_keyboard: "dvorak"
+bootc_iso_lang: "en_US.UTF-8"
+bootc_iso_timezone: "America/New_York"
+bootc_iso_hostname: "mybox"
+
+# Disk configuration
+bootc_iso_use_all_disks: false  # When true, uses all available disks (no ignoredisk)
+bootc_iso_target_disk_id: "{{ undef(hint='bootc_iso_target_disk_id must be provided when bootc_iso_use_all_disks is false') }}"
+
+# User configuration
+bootc_iso_user_name: "shanemcd"
+bootc_iso_user_password: ""  # Plain text password - will be hashed
+bootc_iso_user_password_hash: ""  # Pre-hashed password (takes precedence)
+bootc_iso_user_groups:
+  - wheel
+
+# Kernel arguments for bootloader
+bootc_iso_kernel_args: "rd.driver.blacklist=nouveau modprobe.blacklist=nouveau modprobe.blacklist=nova_core nvidia.NVreg_PreserveVideoMemoryAllocations=1 nvidia.NVreg_TemporaryFilePath=/var/tmp intel_iommu=on iommu=pt"
+
+# Shutdown command after installation: "reboot" or "poweroff"
+bootc_iso_shutdown_command: "poweroff"
+
+# bootc-image-builder container image
+bootc_iso_builder_image: "quay.io/centos-bootc/bootc-image-builder:latest"

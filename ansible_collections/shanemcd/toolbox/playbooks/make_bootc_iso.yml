@@ -1,0 +1,5 @@
+---
+- name: Build a bootable ISO with embedded container image using bootc-image-builder
+  hosts: localhost
+  roles:
+    - bootc_iso
