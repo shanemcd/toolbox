@@ -6,6 +6,7 @@ VM_NAME ?= fedora-mybox
 VM_MEMORY ?= 10000
 VM_VCPUS ?= 4
 GPU_PASSTHROUGH ?= no
+BOOTC_USE_ALL_DISKS ?= no
 
 # Append -gpu suffix to VM name if GPU passthrough is enabled
 ifeq ($(GPU_PASSTHROUGH),yes)
@@ -65,6 +66,15 @@ mybox: build-mybox
 .PHONY: build-mybox
 build-mybox:
 	podman build --pull=Always -t $(MYBOX_IMAGE):latest-$(ARCH) -t $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(ARCH) mybox
+
+context/mybox-$(ARCH).tar: $(shell find mybox -type f)
+	$(MAKE) mybox
+	@mkdir -p context
+	podman save $(MYBOX_IMAGE):latest-$(ARCH) -o $@ --format oci-archive
+	@echo "Container archive saved to $@"
+
+.PHONY: mybox-archive
+mybox-archive: context/mybox-$(ARCH).tar
 
 .PHONY: push-mybox
 push-mybox: mybox
@@ -134,6 +144,26 @@ virt-install: vm-disk.qcow2 context/custom.iso
 		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
 		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
 
+.PHONY: virt-install-embedded
+virt-install-embedded: vm-disk.qcow2 context/custom-embedded.iso
+	@echo "Creating libvirt VM with embedded container: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
+	@mkdir -p $(HOME)/.local/share/libvirt/images
+	ansible-playbook shanemcd.toolbox.virt_install \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=$(VM_MEMORY) \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
+		-e virt_install_disk_dest=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_iso_source=$(CURDIR)/context/custom-embedded.iso \
+		-e virt_install_iso_dest=$(HOME)/.local/share/libvirt/images/custom-embedded.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
+
 .PHONY: virt-install-console
 virt-install-console: vm-disk.qcow2 context/custom.iso
 	@echo "Creating libvirt VM with console: $(VM_NAME_FULL)"
@@ -179,3 +209,57 @@ context/custom.iso: context
 		-e fedora_iso_kickstart_shutdown_command=poweroff \
 		-e container_runtime=$(CONTAINER_RUNTIME) \
 		$(ANSIBLE_EXTRA_ARGS)
+
+context/custom-embedded.iso: context context/mybox-$(ARCH).tar
+	ansible-playbook shanemcd.toolbox.make_fedora_iso -v -K \
+		-e fedora_iso_build_context=$(CURDIR)/context \
+		-e fedora_iso_output_filename=custom-embedded.iso \
+		-e fedora_iso_force=yes \
+		-e fedora_iso_kickstart_password=fortestingonly \
+		-e fedora_iso_target_disk_id=virtio-f1ce90 \
+		-e fedora_iso_kickstart_shutdown_command=poweroff \
+		-e container_runtime=$(CONTAINER_RUNTIME) \
+		-e fedora_iso_embed_container=yes \
+		-e fedora_iso_container_archive=mybox-$(ARCH).tar \
+		$(ANSIBLE_EXTRA_ARGS)
+
+# bootc-image-builder based ISO generation
+output:
+	mkdir -p $@
+
+ifeq ($(BOOTC_USE_ALL_DISKS),yes)
+  BOOTC_DISK_ARGS := -e bootc_iso_use_all_disks=yes
+else
+  BOOTC_DISK_ARGS := -e bootc_iso_target_disk_id=virtio-f1ce90
+endif
+
+.PHONY: bootc-iso
+bootc-iso: output/bootiso/install.iso
+
+output/bootiso/install.iso: output
+	ansible-playbook shanemcd.toolbox.make_bootc_iso -v -K \
+		-e bootc_iso_build_context=$(CURDIR)/output \
+		-e bootc_iso_force=yes \
+		-e bootc_iso_user_password=fortestingonly \
+		$(BOOTC_DISK_ARGS) \
+		$(ANSIBLE_EXTRA_ARGS)
+
+.PHONY: virt-install-bootc
+virt-install-bootc: vm-disk.qcow2 output/bootiso/install.iso
+	@echo "Creating libvirt VM with bootc ISO: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
+	@mkdir -p $(HOME)/.local/share/libvirt/images
+	ansible-playbook shanemcd.toolbox.virt_install \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=24000 \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
+		-e virt_install_disk_dest=$(HOME)/.local/share/libvirt/images/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_iso_source=$(CURDIR)/output/bootiso/install.iso \
+		-e virt_install_iso_dest=$(HOME)/.local/share/libvirt/images/bootc-install.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)

@@ -84,6 +84,7 @@ RUN <<EORUN
         libvirt \
         libvirt-daemon-kvm \
         nc \
+        openldap-clients \
         pandoc \
         python-devel \
         python-virtualenvwrapper \

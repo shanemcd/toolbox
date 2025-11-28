@@ -45,7 +45,8 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 
 ### Available Playbooks
 
-- `make_fedora_iso` - Generate custom Fedora ISO with kickstart
+- `make_fedora_iso` - Generate custom Fedora ISO with kickstart (mkksiso-based, pulls image from registry)
+- `make_bootc_iso` - Generate ISO with embedded container using bootc-image-builder (offline installation)
 - `install_flatpaks` - Install flatpaks from vars/main.yml
 - `list_flatpaks` - List currently installed flatpaks
 - `fonts` - Install custom fonts
@@ -53,11 +54,43 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 - `kde` - Configure KDE Plasma favorites via D-Bus API
 - `authorized_keys` - Configure SSH authorized keys
 - `jetkvm_tailscale` - Configure JetKVM with Tailscale
+- `tailscale_up` - Install Tailscale and join tailnet with auth key
 - `inception` - Meta-playbook for full system setup
 
 ## Common Commands
 
-### ISO Generation
+### ISO Generation (bootc-image-builder)
+
+Use bootc-image-builder to embed the container image directly in the ISO for offline installation:
+
+```bash
+make bootc-iso
+# Output: output/bootiso/install.iso
+```
+
+To use all available disks (omits `ignoredisk` directive):
+```bash
+make bootc-iso BOOTC_USE_ALL_DISKS=yes
+```
+
+With custom parameters:
+```bash
+ansible-playbook shanemcd.toolbox.make_bootc_iso -v -K \
+  -e bootc_iso_build_context=/path/to/output \
+  -e bootc_iso_force=yes \
+  -e bootc_iso_user_password=$PASSWORD \
+  -e bootc_iso_target_disk_id=nvme-Samsung_SSD_... \
+  -e bootc_iso_use_all_disks=yes
+```
+
+Test with virt-install (requires 24GB+ RAM for installation):
+```bash
+make virt-install-bootc
+```
+
+### ISO Generation (mkksiso)
+
+Use mkksiso when network access is available during installation (pulls container from registry):
 
 Using Docker (recommended):
 ```bash
@@ -98,6 +131,28 @@ Manage VMs:
 ```bash
 make virt-start            # Start existing VM
 make virt-destroy          # Remove VM (preserves disk)
+```
+
+### Tailscale
+
+Join a machine to your tailnet:
+```bash
+# Generate a one-off auth key at https://login.tailscale.com/admin/settings/keys
+# Then run:
+uvx --from ansible-core ansible-playbook shanemcd.toolbox.tailscale_up \
+  -i <inventory> \
+  -e tailscale_auth_key=tskey-auth-...
+```
+
+With optional parameters:
+```bash
+uvx --from ansible-core ansible-playbook shanemcd.toolbox.tailscale_up \
+  -i <inventory> \
+  -e tailscale_auth_key=tskey-auth-... \
+  -e tailscale_advertise_tags=tag:server \
+  -e tailscale_accept_routes=true \
+  -e tailscale_ssh=true \
+  -e tailscale_hostname=my-custom-hostname
 ```
 
 ### Bootable Container
@@ -141,9 +196,26 @@ The `emacs` role:
 
 This ensures vterm compilation happens automatically without prompts during provisioning.
 
-### Fedora ISO Build Process
+### bootc-image-builder ISO Build Process
 
-The ISO build:
+The `bootc_iso` role uses bootc-image-builder to create ISOs with embedded container images (for offline installation):
+
+1. Renders TOML config with kickstart content (partitioning, users, etc.)
+2. Pulls the mybox container image
+3. Runs bootc-image-builder which:
+   - Creates an anaconda installer with the container embedded at `/run/install/repo/container`
+   - Generates base kickstart for `ostreecontainer` deployment
+   - Merges custom kickstart content
+4. Produces bootable ISO at `output/bootiso/install.iso` (~15GB with 14GB container)
+
+**Key insight**: System configuration (keyboard, locale, timezone) must be baked into the container image, not the kickstart. The kickstart only affects the installer environment.
+
+**Requirements**: 24GB+ RAM during installation to extract the large container image.
+
+### Fedora ISO Build Process (mkksiso)
+
+The `fedora_iso` role uses mkksiso to inject a kickstart into the Fedora netinst ISO. The container image is pulled from the registry during installation (requires network):
+
 1. Fetches latest Fedora version from downloads API
 2. Downloads Fedora Everything netinst ISO
 3. Renders kickstart template with password, target disk, and bootc image reference
@@ -162,7 +234,24 @@ The Makefile detects host architecture and sets appropriate QEMU settings:
 
 ## Important Variables
 
-### ISO Generation
+### bootc ISO Generation (bootc-image-builder)
+
+Ansible variables:
+- `bootc_iso_image` - Container image to embed (default: quay.io/shanemcd/mybox)
+- `bootc_iso_tag` - Image tag (default: latest-{arch})
+- `bootc_iso_build_context` - Output directory for ISO (required)
+- `bootc_iso_force` - Overwrite existing ISO (yes/no)
+- `bootc_iso_user_password` - Plain text password (will be hashed)
+- `bootc_iso_user_password_hash` - Pre-hashed password (takes precedence)
+- `bootc_iso_use_all_disks` - Use all available disks, omit ignoredisk (default: no)
+- `bootc_iso_target_disk_id` - Disk identifier for installation (ignored if use_all_disks=yes)
+- `bootc_iso_kernel_args` - Kernel boot arguments
+- `bootc_iso_installer_mode` - "graphical" (default) or "text --non-interactive"
+
+Makefile variables:
+- `BOOTC_USE_ALL_DISKS` - Set to "yes" to use all disks (default: no)
+
+### ISO Generation (mkksiso)
 - `fedora_iso_build_context` - Directory for ISO build artifacts
 - `fedora_iso_force` - Overwrite existing ISO (yes/no)
 - `fedora_iso_kickstart_password` - Root password for installed system
