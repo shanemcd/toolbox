@@ -16,10 +16,8 @@ BASE_IMAGE_SILVERBLUE := quay.io/fedora/fedora-silverblue:$(FEDORA_VERSION)
 
 ifeq ($(DESKTOP),silverblue)
   BASE_IMAGE := $(BASE_IMAGE_SILVERBLUE)
-  DESKTOP_SUFFIX := -silverblue
 else
   BASE_IMAGE := $(BASE_IMAGE_KINOITE)
-  DESKTOP_SUFFIX := -kinoite
 endif
 
 # Append -gpu suffix to VM name if GPU passthrough is enabled
@@ -82,8 +80,8 @@ build-mybox:
 	$(CONTAINER_RUNTIME) build --pull \
 		-f mybox/Containerfile \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) \
-		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH) \
+		-t $(MYBOX_IMAGE):latest-$(DESKTOP)-$(ARCH) \
+		-t $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(DESKTOP)-$(ARCH) \
 		mybox
 
 .PHONY: build-mybox-kinoite
@@ -100,7 +98,7 @@ build-mybox-both: build-mybox-kinoite build-mybox-silverblue
 context/mybox-$(DESKTOP)-$(ARCH).tar: $(shell find mybox -type f)
 	$(MAKE) mybox DESKTOP=$(DESKTOP)
 	@mkdir -p context
-	$(CONTAINER_RUNTIME) save $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) -o $@ --format oci-archive
+	$(CONTAINER_RUNTIME) save $(MYBOX_IMAGE):latest-$(DESKTOP)-$(ARCH) -o $@ --format oci-archive
 	@echo "Container archive saved to $@"
 
 .PHONY: mybox-archive
@@ -116,8 +114,8 @@ mybox-archive-silverblue:
 
 .PHONY: push-mybox
 push-mybox: mybox
-	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH)
-	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH)
+	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(DESKTOP)-$(ARCH)
+	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE):latest-$(DESKTOP)-$(ARCH)
 
 .PHONY: push-mybox-kinoite
 push-mybox-kinoite:
@@ -132,18 +130,18 @@ push-mybox-both: push-mybox-kinoite push-mybox-silverblue
 
 .PHONY: push-mybox-manifest
 push-mybox-manifest:
-	-$(CONTAINER_RUNTIME) rmi $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+	-$(CONTAINER_RUNTIME) rmi $(MYBOX_IMAGE):latest-$(DESKTOP)
 
-	$(CONTAINER_RUNTIME) manifest create $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+	$(CONTAINER_RUNTIME) manifest create $(MYBOX_IMAGE):latest-$(DESKTOP)
 
-	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
-		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-x86_64
+	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE):latest-$(DESKTOP) \
+		docker://$(MYBOX_IMAGE):latest-$(DESKTOP)-x86_64
 
-	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
-		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-aarch64
+	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE):latest-$(DESKTOP) \
+		docker://$(MYBOX_IMAGE):latest-$(DESKTOP)-aarch64
 
-	$(CONTAINER_RUNTIME) manifest push --all $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
-		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+	$(CONTAINER_RUNTIME) manifest push --all $(MYBOX_IMAGE):latest-$(DESKTOP) \
+		docker://$(MYBOX_IMAGE):latest-$(DESKTOP)
 
 .PHONY: push-mybox-manifest-kinoite
 push-mybox-manifest-kinoite:
@@ -158,7 +156,7 @@ push-mybox-manifest-both: push-mybox-manifest-kinoite push-mybox-manifest-silver
 
 .PHONY: bootc-switch-mybox
 bootc-switch-mybox:
-	sudo bootc switch $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)
+	sudo bootc switch $(MYBOX_IMAGE):$(MYBOX_VERSION)-$(DESKTOP)
 
 .PHONY: update-mybox
 update-mybox: build-mybox push-mybox push-mybox-manifest bootc-switch-mybox
