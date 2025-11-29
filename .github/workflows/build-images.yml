@@ -20,6 +20,10 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           df -h
 
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $2}' | docker login quay.io -u $(echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $1}') --password-stdin
+
       - name: Build Kinoite image
         run: make build-mybox-kinoite CONTAINER_RUNTIME=docker
 
@@ -27,9 +31,14 @@ jobs:
         run: |
           docker images | grep mybox
 
+      - name: Push Kinoite image
+        run: make push-mybox-kinoite CONTAINER_RUNTIME=docker
+
       - name: Save image size info
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Kinoite Image" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Images pushed to Quay.io" >> $GITHUB_STEP_SUMMARY
