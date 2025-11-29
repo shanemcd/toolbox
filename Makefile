@@ -79,7 +79,7 @@ mybox: build-mybox
 
 .PHONY: build-mybox
 build-mybox:
-	podman build --pull=Always \
+	$(CONTAINER_RUNTIME) build --pull=Always \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) \
 		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH) \
@@ -99,7 +99,7 @@ build-mybox-both: build-mybox-kinoite build-mybox-silverblue
 context/mybox-$(DESKTOP)-$(ARCH).tar: $(shell find mybox -type f)
 	$(MAKE) mybox DESKTOP=$(DESKTOP)
 	@mkdir -p context
-	podman save $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) -o $@ --format oci-archive
+	$(CONTAINER_RUNTIME) save $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) -o $@ --format oci-archive
 	@echo "Container archive saved to $@"
 
 .PHONY: mybox-archive
@@ -115,8 +115,8 @@ mybox-archive-silverblue:
 
 .PHONY: push-mybox
 push-mybox: mybox
-	podman push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH)
-	podman push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH)
+	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH)
+	$(CONTAINER_RUNTIME) push $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH)
 
 .PHONY: push-mybox-kinoite
 push-mybox-kinoite:
@@ -131,17 +131,17 @@ push-mybox-both: push-mybox-kinoite push-mybox-silverblue
 
 .PHONY: push-mybox-manifest
 push-mybox-manifest:
-	-podman rmi $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+	-$(CONTAINER_RUNTIME) rmi $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
 
-	podman manifest create $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
+	$(CONTAINER_RUNTIME) manifest create $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
 
-	podman manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
 		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-x86_64
 
-	podman manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+	$(CONTAINER_RUNTIME) manifest add $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
 		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-aarch64
 
-	podman manifest push --all $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
+	$(CONTAINER_RUNTIME) manifest push --all $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest \
 		docker://$(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest
 
 .PHONY: push-mybox-manifest-kinoite

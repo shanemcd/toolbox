@@ -11,11 +11,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Podman
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y podman
-
       - name: Free up disk space
         run: |
           # Remove unnecessary packages to free up space
@@ -26,15 +21,15 @@ jobs:
           df -h
 
       - name: Build Kinoite image
-        run: make build-mybox-kinoite
+        run: make build-mybox-kinoite CONTAINER_RUNTIME=docker
 
       - name: Show image info
         run: |
-          podman images | grep mybox
+          docker images | grep mybox
 
       - name: Save image size info
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Kinoite Image" >> $GITHUB_STEP_SUMMARY
-          podman images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.Created}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
+          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
