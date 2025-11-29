@@ -79,7 +79,7 @@ mybox: build-mybox
 
 .PHONY: build-mybox
 build-mybox:
-	$(CONTAINER_RUNTIME) build --pull=Always \
+	$(CONTAINER_RUNTIME) build --pull=always \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):latest-$(ARCH) \
 		-t $(MYBOX_IMAGE)$(DESKTOP_SUFFIX):$(MYBOX_VERSION)-$(ARCH) \
