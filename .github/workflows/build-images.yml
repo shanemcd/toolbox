@@ -4,14 +4,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-kinoite:
-    name: Build Kinoite Image
-    runs-on: ubuntu-latest
+  build-images:
+    name: Build ${{ matrix.desktop }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'aarch64' && 'macos-latest' || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        desktop: [kinoite, silverblue]
+        arch: [x86_64, aarch64]
+      fail-fast: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Free up disk space
+        if: runner.os == 'Linux'
         run: |
           # Remove unnecessary packages to free up space
           sudo apt-get clean
@@ -20,25 +26,30 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           df -h
 
+      - name: Install Docker on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install docker docker-buildx
+          colima start --cpu 4 --memory 8 --disk 100
+
       - name: Login to Quay.io
         run: |
           echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $2}' | docker login quay.io -u $(echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $1}') --password-stdin
 
-      - name: Build Kinoite image
-        run: make build-mybox-kinoite CONTAINER_RUNTIME=docker
+      - name: Build image
+        run: make build-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker
 
       - name: Show image info
         run: |
           docker images | grep mybox
 
-      - name: Push Kinoite image
-        run: make push-mybox-kinoite CONTAINER_RUNTIME=docker
+      - name: Push image
+        run: make push-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker
 
       - name: Save image size info
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Summary - ${{ matrix.desktop }} (${{ matrix.arch }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Kinoite Image" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Images pushed to Quay.io" >> $GITHUB_STEP_SUMMARY
