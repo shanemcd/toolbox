@@ -1,4 +1,23 @@
 ---
+- name: Ensure chezmoi config directory exists
+  ansible.builtin.file:
+    path: "{{ dotfiles_chezmoi_config_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Check if chezmoi age key already exists
+  ansible.builtin.stat:
+    path: "{{ dotfiles_chezmoi_key_path }}"
+  register: chezmoi_key_stat
+
+- name: Fetch chezmoi age key from 1Password
+  ansible.builtin.copy:
+    content: "{{ lookup('community.general.onepassword_doc', dotfiles_onepassword_key_item) }}"
+    dest: "{{ dotfiles_chezmoi_key_path }}"
+    mode: '0600'
+  when: not chezmoi_key_stat.stat.exists
+  no_log: true
+
 - name: Check if chezmoi is already initialized
   ansible.builtin.stat:
     path: "{{ dotfiles_source_dir }}/.git"

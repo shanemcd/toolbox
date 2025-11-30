@@ -5,6 +5,15 @@ dotfiles_repo: "git@github.com:shanemcd/dotfiles.git"
 # Chezmoi source directory
 dotfiles_source_dir: "{{ ansible_facts['env']['HOME'] }}/.local/share/chezmoi"
 
+# Chezmoi config directory
+dotfiles_chezmoi_config_dir: "{{ ansible_facts['env']['HOME'] }}/.config/chezmoi"
+
+# Path to the chezmoi age encryption key
+dotfiles_chezmoi_key_path: "{{ dotfiles_chezmoi_config_dir }}/key.txt"
+
+# 1Password item name containing the chezmoi age key
+dotfiles_onepassword_key_item: "Chezmoi Key"
+
 # Whether to run chezmoi apply after init
 dotfiles_apply: true
 
