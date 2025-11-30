@@ -48,7 +48,7 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 
 - `make_fedora_iso` - Generate custom Fedora ISO with kickstart (mkksiso-based, pulls image from registry)
 - `make_bootc_iso` - Generate ISO with embedded container using bootc-image-builder (offline installation)
-- `dotfiles` - Initialize chezmoi, clone dotfiles repo, decrypt secrets, and apply configuration
+- `dotfiles` - Fetch chezmoi age key from 1Password, initialize chezmoi, clone dotfiles repo, decrypt secrets, and apply configuration (requires 1Password CLI authenticated)
 - `install_flatpaks` - Install flatpaks from vars/main.yml
 - `list_flatpaks` - List currently installed flatpaks
 - `fonts` - Install custom fonts
@@ -442,3 +442,9 @@ Makefile variables:
 ### For VM Testing
 - QEMU (`qemu-system-{arch}`) or virt-install/libvirt
 - For ARM: EFI firmware at `/opt/homebrew/share/qemu/edk2-aarch64-code.fd`
+
+### For Dotfiles Playbook
+- `chezmoi` installed on the target system
+- `community.general` Ansible collection (for `onepassword_doc` lookup)
+- 1Password CLI (`op`) installed and authenticated
+- 1Password item named "Chezmoi Key" containing the age private key
