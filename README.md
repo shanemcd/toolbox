@@ -49,13 +49,35 @@ make qemu  # Boot ISO in QEMU, install, then reboot to test
 **Note:** Podman requires sudo (`-K`) because `mkksiso` 38.4+ needs root privileges to create UEFI boot images. Rootless Podman cannot access the loop devices required for EFI boot image creation.
 
 #### `inception`
-Meta-playbook that runs a full environment setup: installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
+Meta-playbook that runs a full environment setup: configures dotfiles, installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
 
 ```bash
 ansible-playbook shanemcd.toolbox.inception
 ```
 
+**Note:** Requires 1Password CLI authenticated for dotfiles role.
+
 ### Desktop Configuration
+
+#### `dotfiles`
+Initialize chezmoi and apply dotfiles configuration. Fetches the age encryption key from 1Password, clones the dotfiles repository, decrypts secrets, and applies the configuration.
+
+```bash
+ansible-playbook shanemcd.toolbox.dotfiles
+```
+
+**Requirements:**
+- `chezmoi` installed on the target system
+- `community.general` Ansible collection
+- 1Password CLI (`op`) installed and authenticated
+- 1Password item named "Chezmoi Key" containing the age private key
+
+**What it does:**
+1. Creates `~/.config/chezmoi` directory with secure permissions
+2. Fetches age encryption key from 1Password (if not already present)
+3. Initializes chezmoi with the dotfiles repository
+4. Runs `setup-secrets.sh` to decrypt secrets
+5. Applies chezmoi configuration
 
 #### `kde`
 Configure KDE Plasma application menu favorites using the official D-Bus API. Favorites are defined in `roles/kde/vars/main.yml`.
