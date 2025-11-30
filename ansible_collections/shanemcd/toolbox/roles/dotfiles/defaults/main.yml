@@ -16,6 +16,3 @@ dotfiles_onepassword_key_item: "Chezmoi Key"
 
 # Whether to run chezmoi apply after init
 dotfiles_apply: true
-
-# Whether to run the setup-secrets.sh script if it exists
-dotfiles_setup_secrets: true

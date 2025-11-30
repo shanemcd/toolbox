@@ -29,6 +29,11 @@
   when: not chezmoi_git.stat.exists
   changed_when: true
   register: chezmoi_init_result
+  environment:
+    # Ensure git uses ssh for submodules
+    GIT_CONFIG_COUNT: "1"
+    GIT_CONFIG_KEY_0: "submodule.recurse"
+    GIT_CONFIG_VALUE_0: "true"
 
 - name: Display chezmoi init output
   ansible.builtin.debug:
@@ -36,30 +41,6 @@
   when:
     - not chezmoi_git.stat.exists
     - chezmoi_init_result is defined
-
-- name: Check if setup-secrets.sh exists
-  ansible.builtin.stat:
-    path: "{{ dotfiles_source_dir }}/setup-secrets.sh"
-  register: setup_secrets_script
-  when: dotfiles_setup_secrets
-
-- name: Run setup-secrets.sh to decrypt secrets
-  ansible.builtin.command:
-    cmd: "{{ dotfiles_source_dir }}/setup-secrets.sh"
-  when:
-    - dotfiles_setup_secrets
-    - setup_secrets_script.stat.exists
-  changed_when: true
-  register: setup_secrets_result
-  failed_when: false
-
-- name: Display setup-secrets.sh output
-  ansible.builtin.debug:
-    var: setup_secrets_result.stdout_lines
-  when:
-    - dotfiles_setup_secrets
-    - setup_secrets_script.stat.exists
-    - setup_secrets_result is defined
 
 - name: Apply chezmoi configuration
   ansible.builtin.command:
