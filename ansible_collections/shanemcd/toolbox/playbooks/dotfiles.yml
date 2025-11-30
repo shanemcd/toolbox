@@ -1,0 +1,8 @@
+---
+- name: Initialize and apply chezmoi dotfiles
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - dotfiles
