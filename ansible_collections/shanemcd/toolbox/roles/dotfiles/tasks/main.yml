@@ -18,17 +18,11 @@
   when: not chezmoi_key_stat.stat.exists
   no_log: true
 
-- name: Check if chezmoi is already initialized
-  ansible.builtin.stat:
-    path: "{{ dotfiles_source_dir }}/.git"
-  register: chezmoi_git
-
-- name: Initialize chezmoi with dotfiles repository
+- name: Initialize or update chezmoi with dotfiles repository
   ansible.builtin.command:
     cmd: chezmoi init --apply {{ dotfiles_repo }}
-  when: not chezmoi_git.stat.exists
-  changed_when: true
   register: chezmoi_init_result
+  changed_when: "'Already up to date' not in chezmoi_init_result.stdout"
   environment:
     # Ensure git uses ssh for submodules
     GIT_CONFIG_COUNT: "1"
@@ -38,9 +32,7 @@
 - name: Display chezmoi init output
   ansible.builtin.debug:
     var: chezmoi_init_result.stdout_lines
-  when:
-    - not chezmoi_git.stat.exists
-    - chezmoi_init_result is defined
+  when: chezmoi_init_result is defined
 
 - name: Apply chezmoi configuration
   ansible.builtin.command:
