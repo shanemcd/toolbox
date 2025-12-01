@@ -20,7 +20,7 @@
 
 - name: Initialize or update chezmoi with dotfiles repository
   ansible.builtin.command:
-    cmd: chezmoi init --apply {{ dotfiles_repo }}
+    cmd: chezmoi init --apply --force {{ dotfiles_repo }}
   register: chezmoi_init_result
   changed_when: "'Already up to date' not in chezmoi_init_result.stdout"
   environment:
