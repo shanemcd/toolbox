@@ -396,7 +396,7 @@ The `mybox/Containerfile` is structured in layers:
 
 Ansible variables:
 - `bootc_iso_image` - Container image to embed (default: quay.io/shanemcd/mybox)
-- `bootc_iso_tag` - Image tag (default: latest-{arch})
+- `bootc_iso_tag` - Image tag (default: latest-kinoite-{arch})
 - `bootc_iso_build_context` - Output directory for ISO (required)
 - `bootc_iso_force` - Overwrite existing ISO (yes/no)
 - `bootc_iso_user_password` - Plain text password (will be hashed)
