@@ -5,6 +5,7 @@
   gather_facts: true
 
   roles:
+    - shanemcd.toolbox.oh_my_zsh
     - shanemcd.toolbox.dotfiles
     - shanemcd.toolbox.flatpaks
     - shanemcd.toolbox.fonts
