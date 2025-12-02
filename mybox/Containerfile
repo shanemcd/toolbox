@@ -71,6 +71,7 @@ RUN <<EORUN
     dnf install -y \
         Sunshine \
         age \
+        chezmoi \
         chromium \
         cmake \
         cockpit \
