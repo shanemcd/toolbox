@@ -12,8 +12,7 @@
   when: not oh_my_zsh_dir.stat.exists
 
 - name: Change default shell to zsh
-  ansible.builtin.command:
-    cmd: chsh -s /usr/bin/zsh
-  register: chsh_result
-  changed_when: chsh_result.rc == 0
-  failed_when: chsh_result.rc != 0
+  ansible.builtin.user:
+    name: "{{ ansible_facts['env']['USER'] }}"
+    shell: /usr/bin/zsh
+  become: true
