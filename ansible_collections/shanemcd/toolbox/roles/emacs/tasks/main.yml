@@ -2,7 +2,7 @@
 - name: Clone .emacs.d repository
   ansible.builtin.git:
     repo: https://github.com/shanemcd/.emacs.d
-    dest: "{{ ansible_env.HOME }}/.emacs.d"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.emacs.d"
     update: true
 
 - name: Install Emacs packages and nerd-icons fonts
@@ -10,6 +10,6 @@
     cmd: >
       emacs --batch
       --eval "(setq vterm-always-compile-module t)"
-      --load {{ ansible_env.HOME }}/.emacs.d/init.el
+      --load {{ ansible_facts['env']['HOME'] }}/.emacs.d/init.el
       --eval "(nerd-icons-install-fonts t)"
   changed_when: false
