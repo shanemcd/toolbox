@@ -9,6 +9,12 @@
   ansible.builtin.command:
     cmd: >
       emacs --batch
+      --eval "(require 'package)"
+      --eval "(add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)"
+      --eval "(package-initialize)"
+      --eval "(package-refresh-contents)"
+      --eval "(unless (package-installed-p 'quelpa) (package-install 'quelpa))"
+      --eval "(unless (package-installed-p 'quelpa-use-package) (package-install 'quelpa-use-package))"
       --eval "(setq vterm-always-compile-module t)"
       --load {{ ansible_facts['env']['HOME'] }}/.emacs.d/init.el
       --eval "(nerd-icons-install-fonts t)"
