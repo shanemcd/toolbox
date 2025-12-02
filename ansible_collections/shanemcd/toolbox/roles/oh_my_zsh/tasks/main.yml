@@ -10,3 +10,9 @@
   args:
     creates: "{{ ansible_facts['env']['HOME'] }}/.oh-my-zsh"
   when: not oh_my_zsh_dir.stat.exists
+
+- name: Change default shell to zsh
+  ansible.builtin.user:
+    name: "{{ ansible_facts['env']['USER'] }}"
+    shell: /usr/bin/zsh
+  become: true
