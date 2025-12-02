@@ -49,13 +49,22 @@ make qemu  # Boot ISO in QEMU, install, then reboot to test
 **Note:** Podman requires sudo (`-K`) because `mkksiso` 38.4+ needs root privileges to create UEFI boot images. Rootless Podman cannot access the loop devices required for EFI boot image creation.
 
 #### `inception`
-Meta-playbook that runs a full environment setup: configures dotfiles, installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
+Meta-playbook that runs a full environment setup: installs Oh My Zsh, configures dotfiles, installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
 
 ```bash
-ansible-playbook shanemcd.toolbox.inception
+ansible-playbook shanemcd.toolbox.inception --ask-become-pass
 ```
 
-**Note:** Requires 1Password CLI authenticated for dotfiles role.
+**Note:** Requires `--ask-become-pass` (or `-K`) for shell change, and 1Password CLI authenticated for dotfiles role.
+
+#### `oh_my_zsh`
+Install Oh My Zsh and set zsh as the default shell.
+
+```bash
+ansible-playbook shanemcd.toolbox.oh_my_zsh --ask-become-pass
+```
+
+**Note:** Requires `--ask-become-pass` (or `-K`) to change the default shell.
 
 ### Desktop Configuration
 

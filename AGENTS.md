@@ -57,7 +57,8 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 - `authorized_keys` - Configure SSH authorized keys
 - `jetkvm_tailscale` - Configure JetKVM with Tailscale
 - `tailscale_up` - Install Tailscale and join tailnet with auth key
-- `inception` - Meta-playbook for full system setup (runs dotfiles, flatpaks, fonts, emacs)
+- `oh_my_zsh` - Install Oh My Zsh and set zsh as default shell (requires `--ask-become-pass` or `-K`)
+- `inception` - Meta-playbook for full system setup (runs oh_my_zsh, dotfiles, flatpaks, fonts, emacs; requires `--ask-become-pass` or `-K`)
 
 ## Adding New Playbooks and Roles
 
