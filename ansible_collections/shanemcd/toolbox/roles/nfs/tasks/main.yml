@@ -4,6 +4,8 @@
   ansible.builtin.file:
     path: "{{ nfs_export_path }}"
     state: directory
+    owner: "{{ nfs_export_owner | default(omit) }}"
+    group: "{{ nfs_export_group | default(omit) }}"
     mode: "0755"
 
 - name: Configure NFS exports

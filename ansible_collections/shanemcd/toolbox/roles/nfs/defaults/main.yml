@@ -18,3 +18,8 @@ nfs_export_options: "ro,sync,no_subtree_check"
 
 # Whether to configure firewalld rules for NFS
 nfs_configure_firewall: true
+
+# Owner and group for the export directory (optional)
+# Set these to allow a local user to write to the export path
+# nfs_export_owner: shanemcd
+# nfs_export_group: shanemcd
