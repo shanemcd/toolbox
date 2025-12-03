@@ -297,13 +297,16 @@ else
   BOOTC_DISK_ARGS := -e bootc_iso_target_disk_id=virtio-f1ce90
 endif
 
+# Set to "yes" to force rebuild of bootc ISO even if it exists
+BOOTC_FORCE ?= no
+
 .PHONY: bootc-iso
 bootc-iso: output/bootiso/install.iso
 
 output/bootiso/install.iso: output
 	ansible-playbook shanemcd.toolbox.make_bootc_iso -v -K \
 		-e bootc_iso_build_context=$(CURDIR)/output \
-		-e bootc_iso_force=yes \
+		-e bootc_iso_force=$(BOOTC_FORCE) \
 		-e bootc_iso_user_password=fortestingonly \
 		$(BOOTC_DISK_ARGS) \
 		$(ANSIBLE_EXTRA_ARGS)

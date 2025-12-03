@@ -31,6 +31,11 @@
     path: "{{ bootc_iso_output_path }}"
   register: bootc_iso_stat
 
+- name: Skip build if ISO already exists
+  ansible.builtin.debug:
+    msg: "ISO already exists at {{ bootc_iso_output_path }}. Use bootc_iso_force=yes to rebuild."
+  when: bootc_iso_stat.stat.exists and not (bootc_iso_force | bool)
+
 - name: Remove existing ISO if force flag is set
   ansible.builtin.file:
     path: "{{ bootc_iso_output_path }}"
@@ -43,6 +48,7 @@
     src: config.toml.j2
     dest: "{{ bootc_iso_config_path }}"
     mode: '0600'
+  when: not bootc_iso_stat.stat.exists or bootc_iso_force | bool
 
 - name: Pull container image
   containers.podman.podman_image:
