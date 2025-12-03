@@ -138,7 +138,7 @@
 - name: Fix ownership of generated ISO file
   ansible.builtin.file:
     path: "{{ fedora_iso_with_kickstart }}"
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_id }}"
+    owner: "{{ ansible_facts['user_id'] }}"
+    group: "{{ ansible_facts['user_id'] }}"
   become: true
   when: final_iso_stat.stat.exists

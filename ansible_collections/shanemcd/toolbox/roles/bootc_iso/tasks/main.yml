@@ -84,8 +84,8 @@
 - name: Fix ownership of generated ISO
   ansible.builtin.file:
     path: "{{ bootc_iso_output_path }}"
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_id }}"
+    owner: "{{ ansible_facts['user_id'] }}"
+    group: "{{ ansible_facts['user_id'] }}"
   become: true
   when: final_iso_stat.stat.exists
 

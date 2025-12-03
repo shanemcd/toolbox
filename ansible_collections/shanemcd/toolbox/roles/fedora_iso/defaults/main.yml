@@ -3,7 +3,7 @@ fedora_iso_version: "latest"
 fedora_iso_arch_map:
   x86_64: x86_64
   arm64: aarch64
-fedora_iso_architecture: "{{ ansible_architecture }}"
+fedora_iso_architecture: "{{ ansible_facts['architecture'] }}"
 fedora_iso_variant: "Everything"
 fedora_iso_build_context: "{{ playbook_dir }}/.generated"
 fedora_iso_cleanup: false  # Whether to delete the temporary directory created for storing the downloaded ISO and rendered kickstart

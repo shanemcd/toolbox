@@ -3,7 +3,7 @@
 
 # Container image to embed in the ISO
 bootc_iso_image: "quay.io/shanemcd/mybox"
-bootc_iso_tag: "latest-kinoite-{{ ansible_architecture }}"
+bootc_iso_tag: "latest-kinoite-{{ ansible_facts['architecture'] }}"
 
 # Output configuration (should be overridden via -e, e.g., -e bootc_iso_build_context=/path/to/output)
 bootc_iso_build_context: "{{ undef(hint='bootc_iso_build_context must be provided') }}"
