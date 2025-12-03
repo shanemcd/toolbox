@@ -108,6 +108,7 @@ RUN <<EORUN
         libvirt \
         libvirt-daemon-kvm \
         nc \
+        nfs-utils \
         openldap-clients \
         pandoc \
         python-devel \
