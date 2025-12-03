@@ -1,0 +1,6 @@
+# NFS exports managed by Ansible
+# {{ ansible_managed }}
+
+{% for client in nfs_allowed_clients %}
+{{ nfs_export_path }} {{ client }}({{ nfs_export_options }})
+{% endfor %}

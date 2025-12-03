@@ -1,0 +1,51 @@
+---
+- name: Ensure exports directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ nfs_export_path }}"
+    state: directory
+    mode: "0755"
+
+- name: Configure NFS exports
+  become: true
+  ansible.builtin.template:
+    src: exports.j2
+    dest: /etc/exports.d/media.exports
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload NFS exports
+
+- name: Enable and start NFS server
+  become: true
+  ansible.builtin.systemd:
+    name: nfs-server
+    enabled: true
+    state: started
+
+- name: Configure firewall for NFS
+  become: true
+  ansible.posix.firewalld:
+    service: nfs
+    permanent: true
+    state: enabled
+    immediate: true
+  when: nfs_configure_firewall | default(true)
+
+- name: Configure firewall for mountd
+  become: true
+  ansible.posix.firewalld:
+    service: mountd
+    permanent: true
+    state: enabled
+    immediate: true
+  when: nfs_configure_firewall | default(true)
+
+- name: Configure firewall for rpc-bind
+  become: true
+  ansible.posix.firewalld:
+    service: rpc-bind
+    permanent: true
+    state: enabled
+    immediate: true
+  when: nfs_configure_firewall | default(true)

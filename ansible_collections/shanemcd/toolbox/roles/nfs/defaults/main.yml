@@ -1,0 +1,20 @@
+---
+# Path to export via NFS
+nfs_export_path: /mnt/media
+
+# List of clients allowed to access the NFS share
+# Examples:
+#   - "192.168.1.0/24"      # Local network subnet
+#   - "100.64.0.0/10"       # Tailscale CGNAT range
+#   - "*.example.com"       # Hostname wildcard
+#   - "10.0.0.5"            # Specific IP
+nfs_allowed_clients:
+  - "192.168.1.0/24"
+  - "100.64.0.0/10"
+
+# NFS export options
+# ro = read-only, sync = synchronous writes, no_subtree_check = improves reliability
+nfs_export_options: "ro,sync,no_subtree_check"
+
+# Whether to configure firewalld rules for NFS
+nfs_configure_firewall: true

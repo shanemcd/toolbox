@@ -60,6 +60,7 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 - `oh_my_zsh` - Install Oh My Zsh and set zsh as default shell (requires `--ask-become-pass` or `-K`)
 - `inception` - Meta-playbook for full system setup (runs oh_my_zsh, dotfiles, flatpaks, fonts, emacs; requires `--ask-become-pass` or `-K`)
 - `sunshine` - Configure Sunshine game streaming with keybindings and enable systemd user service
+- `nfs` - Configure NFS server for media sharing (requires `--ask-become-pass` or `-K`)
 
 ## Adding New Playbooks and Roles
 
