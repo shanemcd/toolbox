@@ -1,0 +1,8 @@
+---
+- name: Configure libvirt for current user
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - libvirt

@@ -10,3 +10,4 @@
     - shanemcd.toolbox.flatpaks
     - shanemcd.toolbox.fonts
     - shanemcd.toolbox.emacs
+    - shanemcd.toolbox.libvirt
