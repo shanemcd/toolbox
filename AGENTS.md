@@ -59,6 +59,7 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 - `tailscale_up` - Install Tailscale and join tailnet with auth key
 - `oh_my_zsh` - Install Oh My Zsh and set zsh as default shell (requires `--ask-become-pass` or `-K`)
 - `inception` - Meta-playbook for full system setup (runs oh_my_zsh, dotfiles, flatpaks, fonts, emacs; requires `--ask-become-pass` or `-K`)
+- `sunshine` - Configure Sunshine game streaming with keybindings and enable systemd user service
 
 ## Adding New Playbooks and Roles
 
@@ -86,6 +87,16 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
    - `defaults/` - Optional: Default variables (can be overridden)
    - `templates/` - Optional: Jinja2 templates
    - `files/` - Optional: Static files to copy
+
+5. **Use modern ansible_facts syntax**: Always use `ansible_facts['fact_name']` instead of the deprecated `ansible_*` variables:
+   ```yaml
+   # CORRECT - use ansible_facts dictionary
+   path: "{{ ansible_facts['env']['HOME'] }}/.config/myapp"
+
+   # DEPRECATED - avoid top-level ansible_* variables
+   path: "{{ ansible_env.HOME }}/.config/myapp"
+   ```
+   This avoids deprecation warnings about `INJECT_FACTS_AS_VARS` being removed in ansible-core 2.24.
 
 ### Creating a New Playbook
 
