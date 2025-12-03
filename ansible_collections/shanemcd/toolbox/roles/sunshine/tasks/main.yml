@@ -1,0 +1,20 @@
+---
+- name: Ensure Sunshine config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/sunshine"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Sunshine configuration
+  ansible.builtin.copy:
+    src: sunshine.conf
+    dest: "{{ ansible_env.HOME }}/.config/sunshine/sunshine.conf"
+    mode: "0644"
+  notify: Restart Sunshine
+
+- name: Enable and start Sunshine user service
+  ansible.builtin.systemd_service:
+    name: sunshine
+    scope: user
+    enabled: true
+    state: started
