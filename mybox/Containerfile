@@ -126,6 +126,7 @@ RUN <<EORUN
         uv \
         virt-install \
         virt-manager \
+        yq \
         zed \
         zsh
 
