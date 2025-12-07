@@ -1,12 +1,10 @@
 ---
-# List of flatpak applications to manage
-flatpaks:
+# List of flatpak applications to manage (available on all architectures)
+flatpaks_common:
   - com.dec05eba.gpu_screen_recorder
-  - com.github.marktext.marktext
   - com.github.rajsolai.textsnatcher
   - com.github.tchx84.Flatseal
   - com.github.wwmm.easyeffects
-  - com.google.Chrome
   - com.jeffser.Alpaca
   - com.raggesilver.BlackBox
   - com.slack.Slack
@@ -20,3 +18,13 @@ flatpaks:
   - org.kde.kweather
   - org.videolan.VLC
   - tv.kodi.Kodi
+
+# x86_64 only flatpaks
+flatpaks_x86_64:
+  - com.github.marktext.marktext
+
+# aarch64 only flatpaks
+flatpaks_aarch64: []
+
+# Combined list based on architecture
+flatpaks: "{{ flatpaks_common + (flatpaks_x86_64 if ansible_facts['architecture'] == 'x86_64' else flatpaks_aarch64) }}"

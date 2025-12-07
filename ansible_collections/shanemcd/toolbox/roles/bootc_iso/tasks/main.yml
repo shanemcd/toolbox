@@ -91,8 +91,8 @@
   ansible.builtin.file:
     path: "{{ bootc_iso_output_path }}"
     owner: "{{ ansible_facts['user_id'] }}"
-    group: "{{ ansible_facts['user_id'] }}"
-  become: true
+    group: "{{ ansible_facts['user_gid'] }}"
+  become: "{{ ansible_facts['system'] == 'Linux' }}"
   when: final_iso_stat.stat.exists
 
 - name: Display ISO location
