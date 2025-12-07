@@ -7,7 +7,6 @@ flatpaks_common:
   - com.github.wwmm.easyeffects
   - com.jeffser.Alpaca
   - com.raggesilver.BlackBox
-  - com.slack.Slack
   - de.haeckerfelix.Shortwave
   - hu.irl.cameractrls
   - io.missioncenter.MissionCenter
@@ -22,6 +21,7 @@ flatpaks_common:
 # x86_64 only flatpaks
 flatpaks_x86_64:
   - com.github.marktext.marktext
+  - com.slack.Slack
 
 # aarch64 only flatpaks
 flatpaks_aarch64: []
