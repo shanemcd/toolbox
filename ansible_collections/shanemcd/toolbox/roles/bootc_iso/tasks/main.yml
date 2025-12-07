@@ -54,7 +54,7 @@
   containers.podman.podman_image:
     name: "{{ bootc_iso_image }}:{{ bootc_iso_tag }}"
     state: present
-  become: true
+  become: "{{ ansible_facts['system'] == 'Linux' }}"
   when: not bootc_iso_stat.stat.exists or bootc_iso_force | bool
 
 - name: Run bootc-image-builder
@@ -79,7 +79,7 @@
       - --rootfs
       - "{{ bootc_iso_rootfs }}"
       - "{{ bootc_iso_image }}:{{ bootc_iso_tag }}"
-  become: true
+  become: "{{ ansible_facts['system'] == 'Linux' }}"
   when: not bootc_iso_stat.stat.exists or bootc_iso_force | bool
 
 - name: Check if generated ISO exists
