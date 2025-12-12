@@ -8,6 +8,7 @@ RUN <<EORUN
     # to avoid needing to take extra steps to turn it back into
     # a bootable image.
     echo "exclude=kernel-core kernel" >> /etc/dnf/dnf.conf
+    echo "install_weak_deps=False" >> /etc/dnf/dnf.conf
 
     dnf update -y
 EORUN
