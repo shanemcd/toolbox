@@ -265,7 +265,7 @@ context:
 	mkdir -p $@
 
 context/custom.iso: context
-	ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
+	ansible-playbook shanemcd.toolbox.fedora_iso -v \
 		-e fedora_iso_build_context=$(CURDIR)/context \
 		-e fedora_iso_force=yes \
 		-e fedora_iso_kickstart_password=fortestingonly \
@@ -275,7 +275,7 @@ context/custom.iso: context
 		$(ANSIBLE_EXTRA_ARGS)
 
 context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
-	ansible-playbook shanemcd.toolbox.make_fedora_iso -v -K \
+	ansible-playbook shanemcd.toolbox.fedora_iso -v -K \
 		-e fedora_iso_build_context=$(CURDIR)/context \
 		-e fedora_iso_output_filename=custom-embedded.iso \
 		-e fedora_iso_force=yes \
@@ -287,14 +287,14 @@ context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 		-e fedora_iso_container_archive=mybox-$(DESKTOP)-$(ARCH).tar \
 		$(ANSIBLE_EXTRA_ARGS)
 
-# bootc-image-builder based ISO generation
+# bootc-image-builder based image generation
 output:
 	mkdir -p $@
 
 ifeq ($(BOOTC_USE_ALL_DISKS),yes)
-  BOOTC_DISK_ARGS := -e bootc_iso_use_all_disks=yes
+  BOOTC_DISK_ARGS := -e bootc_image_use_all_disks=yes
 else
-  BOOTC_DISK_ARGS := -e bootc_iso_target_disk_id=virtio-f1ce90
+  BOOTC_DISK_ARGS := -e bootc_image_target_disk_id=virtio-f1ce90
 endif
 
 # Set to "yes" to force rebuild of bootc ISO even if it exists
@@ -304,11 +304,21 @@ BOOTC_FORCE ?= no
 bootc-iso: output/bootiso/install.iso
 
 output/bootiso/install.iso: output
-	ansible-playbook shanemcd.toolbox.make_bootc_iso -v -K \
-		-e bootc_iso_build_context=$(CURDIR)/output \
-		-e bootc_iso_force=$(BOOTC_FORCE) \
-		-e bootc_iso_user_password=fortestingonly \
+	ansible-playbook shanemcd.toolbox.bootc_iso -v -K \
+		-e bootc_image_build_context=$(CURDIR)/output \
+		-e bootc_image_force=$(BOOTC_FORCE) \
+		-e bootc_image_user_password=fortestingonly \
 		$(BOOTC_DISK_ARGS) \
+		$(ANSIBLE_EXTRA_ARGS)
+
+.PHONY: bootc-qcow2
+bootc-qcow2: output/qcow2/disk.qcow2
+
+output/qcow2/disk.qcow2: output
+	ansible-playbook shanemcd.toolbox.bootc_qcow2 -v -K \
+		-e bootc_image_build_context=$(CURDIR)/output \
+		-e bootc_image_force=yes \
+		-e bootc_image_user_password=fortestingonly \
 		$(ANSIBLE_EXTRA_ARGS)
 
 .PHONY: virt-install-bootc

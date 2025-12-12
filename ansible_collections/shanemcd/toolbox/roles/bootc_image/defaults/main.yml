@@ -1,0 +1,50 @@
+---
+# bootc-image-builder configuration
+
+# Output type: "anaconda-iso" or "qcow2"
+bootc_image_output_type: "anaconda-iso"
+
+# Container image to use
+bootc_image_image: "quay.io/shanemcd/mybox"
+bootc_image_tag: "latest-kinoite-{{ ansible_facts['architecture'] }}"
+
+# Output configuration (should be overridden via -e, e.g., -e bootc_image_build_context=/path/to/output)
+bootc_image_build_context: "{{ undef(hint='bootc_image_build_context must be provided') }}"
+bootc_image_rootfs: "xfs"
+
+# Force rebuild even if output exists
+bootc_image_force: false
+
+# Installer mode (ISO only): "graphical" or "text --non-interactive"
+bootc_image_installer_mode: "graphical"
+
+# System configuration (for kickstart - ISO only)
+bootc_image_keyboard: "dvorak"
+bootc_image_lang: "en_US.UTF-8"
+bootc_image_timezone: "America/New_York"
+bootc_image_hostname: "mybox"
+
+# Disk configuration (ISO only)
+bootc_image_use_all_disks: false  # When true, uses all available disks (no ignoredisk)
+bootc_image_target_disk_id: ""  # Required when use_all_disks is false and output_type is anaconda-iso
+
+# User configuration
+bootc_image_user_name: "shanemcd"
+bootc_image_user_password: ""  # Plain text password - will be hashed
+bootc_image_user_password_hash: ""  # Pre-hashed password (takes precedence)
+bootc_image_user_groups:
+  - wheel
+bootc_image_user_ssh_keys: []  # List of SSH public keys
+bootc_image_user_github: "shanemcd"  # GitHub username to fetch SSH keys from (qcow2 only)
+
+# Kernel arguments for bootloader (ISO only)
+bootc_image_kernel_args: "rd.driver.blacklist=nouveau modprobe.blacklist=nouveau modprobe.blacklist=nova_core nvidia.NVreg_PreserveVideoMemoryAllocations=1 nvidia.NVreg_TemporaryFilePath=/var/tmp intel_iommu=on iommu=pt"
+
+# Shutdown command after installation (ISO only): "reboot" or "poweroff"
+bootc_image_shutdown_command: "poweroff"
+
+# Disk size for qcow2 images (must be larger than container image size)
+bootc_image_root_size: "50 GiB"
+
+# bootc-image-builder container image
+bootc_image_builder_image: "quay.io/centos-bootc/bootc-image-builder:latest"

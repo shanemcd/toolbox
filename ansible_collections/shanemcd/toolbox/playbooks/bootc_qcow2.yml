@@ -1,0 +1,7 @@
+---
+- name: Build a qcow2 disk image using bootc-image-builder
+  hosts: localhost
+  roles:
+    - role: bootc_image
+      vars:
+        bootc_image_output_type: qcow2

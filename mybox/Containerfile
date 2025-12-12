@@ -117,6 +117,7 @@ RUN <<EORUN
         qemu-kvm \
         qemu-system-$(uname -m) \
         qemu-ui-gtk \
+        quickemu \
         qt6-qttools \
         ripgrep \
         sqlite \

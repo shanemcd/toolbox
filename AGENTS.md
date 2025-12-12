@@ -46,8 +46,9 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 
 ### Available Playbooks
 
-- `make_fedora_iso` - Generate custom Fedora ISO with kickstart (mkksiso-based, pulls image from registry)
-- `make_bootc_iso` - Generate ISO with embedded container using bootc-image-builder (offline installation)
+- `fedora_iso` - Generate custom Fedora ISO with kickstart (mkksiso-based, pulls image from registry)
+- `bootc_iso` - Generate ISO with embedded container using bootc-image-builder (offline installation)
+- `bootc_qcow2` - Generate qcow2 disk image using bootc-image-builder
 - `dotfiles` - Fetch chezmoi age key from 1Password, initialize chezmoi, clone dotfiles repo, decrypt secrets, and apply configuration (requires 1Password CLI authenticated)
 - `install_flatpaks` - Install flatpaks from vars/main.yml
 - `list_flatpaks` - List currently installed flatpaks
@@ -177,28 +178,42 @@ After adding a new playbook:
 
 ## Common Commands
 
-### ISO Generation (bootc-image-builder)
+### Image Generation (bootc-image-builder)
 
-Use bootc-image-builder to embed the container image directly in the ISO for offline installation:
+Use bootc-image-builder to create bootable images from the container:
 
+**ISO (for offline installation):**
 ```bash
 make bootc-iso
 # Output: output/bootiso/install.iso
 ```
 
-To use all available disks (omits `ignoredisk` directive):
+**qcow2 (for VMs or direct deployment):**
+```bash
+make bootc-qcow2
+# Output: output/qcow2/disk.qcow2
+```
+
+To use all available disks (omits `ignoredisk` directive, ISO only):
 ```bash
 make bootc-iso BOOTC_USE_ALL_DISKS=yes
 ```
 
 With custom parameters:
 ```bash
-ansible-playbook shanemcd.toolbox.make_bootc_iso -v -K \
-  -e bootc_iso_build_context=/path/to/output \
-  -e bootc_iso_force=yes \
-  -e bootc_iso_user_password=$PASSWORD \
-  -e bootc_iso_target_disk_id=nvme-Samsung_SSD_... \
-  -e bootc_iso_use_all_disks=yes
+# ISO
+ansible-playbook shanemcd.toolbox.bootc_iso -v -K \
+  -e bootc_image_build_context=/path/to/output \
+  -e bootc_image_force=yes \
+  -e bootc_image_user_password=$PASSWORD \
+  -e bootc_image_target_disk_id=nvme-Samsung_SSD_... \
+  -e bootc_image_use_all_disks=yes
+
+# qcow2
+ansible-playbook shanemcd.toolbox.bootc_qcow2 -v -K \
+  -e bootc_image_build_context=/path/to/output \
+  -e bootc_image_force=yes \
+  -e bootc_image_user_password=$PASSWORD
 ```
 
 Test with virt-install (requires 24GB+ RAM for installation):
@@ -231,7 +246,7 @@ make context/custom-embedded.iso
 
 With custom parameters:
 ```bash
-ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
+ansible-playbook shanemcd.toolbox.fedora_iso -v \
   -e fedora_iso_build_context=/path/to/context \
   -e fedora_iso_force=yes \
   -e fedora_iso_kickstart_password=$PASSWORD \
@@ -344,10 +359,11 @@ The `emacs` role:
 
 This ensures vterm compilation happens automatically without prompts during provisioning.
 
-### bootc-image-builder ISO Build Process
+### bootc-image-builder Build Process
 
-The `bootc_iso` role uses bootc-image-builder to create ISOs with embedded container images (for offline installation):
+The `bootc_image` role uses bootc-image-builder to create bootable images from container images. It supports two output types:
 
+**ISO output (`bootc_image_output_type: anaconda-iso`):**
 1. Renders TOML config with kickstart content (partitioning, users, etc.)
 2. Pulls the mybox container image
 3. Runs bootc-image-builder which:
@@ -356,9 +372,15 @@ The `bootc_iso` role uses bootc-image-builder to create ISOs with embedded conta
    - Merges custom kickstart content
 4. Produces bootable ISO at `output/bootiso/install.iso` (~15GB with 14GB container)
 
+**qcow2 output (`bootc_image_output_type: qcow2`):**
+1. Renders TOML config with user configuration
+2. Pulls the mybox container image
+3. Runs bootc-image-builder to create a ready-to-boot disk image
+4. Produces qcow2 at `output/qcow2/disk.qcow2`
+
 **Key insight**: System configuration (keyboard, locale, timezone) must be baked into the container image, not the kickstart. The kickstart only affects the installer environment.
 
-**Requirements**: 24GB+ RAM during installation to extract the large container image.
+**Requirements**: 24GB+ RAM during ISO installation to extract the large container image.
 
 ### Fedora ISO Build Process (mkksiso)
 
@@ -405,19 +427,20 @@ The `mybox/Containerfile` is structured in layers:
 
 ## Important Variables
 
-### bootc ISO Generation (bootc-image-builder)
+### bootc Image Generation (bootc-image-builder)
 
 Ansible variables:
-- `bootc_iso_image` - Container image to embed (default: quay.io/shanemcd/mybox)
-- `bootc_iso_tag` - Image tag (default: latest-kinoite-{arch})
-- `bootc_iso_build_context` - Output directory for ISO (required)
-- `bootc_iso_force` - Overwrite existing ISO (yes/no)
-- `bootc_iso_user_password` - Plain text password (will be hashed)
-- `bootc_iso_user_password_hash` - Pre-hashed password (takes precedence)
-- `bootc_iso_use_all_disks` - Use all available disks, omit ignoredisk (default: no)
-- `bootc_iso_target_disk_id` - Disk identifier for installation (ignored if use_all_disks=yes)
-- `bootc_iso_kernel_args` - Kernel boot arguments
-- `bootc_iso_installer_mode` - "graphical" (default) or "text --non-interactive"
+- `bootc_image_output_type` - Output format: "anaconda-iso" (default) or "qcow2"
+- `bootc_image_image` - Container image to use (default: quay.io/shanemcd/mybox)
+- `bootc_image_tag` - Image tag (default: latest-kinoite-{arch})
+- `bootc_image_build_context` - Output directory (required)
+- `bootc_image_force` - Overwrite existing output (yes/no)
+- `bootc_image_user_password` - Plain text password (will be hashed)
+- `bootc_image_user_password_hash` - Pre-hashed password (takes precedence)
+- `bootc_image_use_all_disks` - Use all available disks, omit ignoredisk (default: no, ISO only)
+- `bootc_image_target_disk_id` - Disk identifier for installation (ISO only, ignored if use_all_disks=yes)
+- `bootc_image_kernel_args` - Kernel boot arguments (ISO only)
+- `bootc_image_installer_mode` - "graphical" (default) or "text --non-interactive" (ISO only)
 
 Makefile variables:
 - `BOOTC_USE_ALL_DISKS` - Set to "yes" to use all disks (default: no)

@@ -1,0 +1,155 @@
+---
+- name: Validate output type
+  ansible.builtin.assert:
+    that:
+      - bootc_image_output_type in ['anaconda-iso', 'qcow2']
+    fail_msg: "bootc_image_output_type must be 'anaconda-iso' or 'qcow2'"
+
+- name: Validate password configuration
+  ansible.builtin.assert:
+    that:
+      - bootc_image_user_password != '' or bootc_image_user_password_hash != ''
+    fail_msg: "Either bootc_image_user_password or bootc_image_user_password_hash must be provided"
+
+- name: Validate disk configuration for ISO
+  ansible.builtin.assert:
+    that:
+      - bootc_image_use_all_disks | bool or bootc_image_target_disk_id != ''
+    fail_msg: "bootc_image_target_disk_id must be provided when bootc_image_use_all_disks is false"
+  when: bootc_image_output_type == 'anaconda-iso'
+
+- name: Set password hash from pre-hashed value
+  ansible.builtin.set_fact:
+    _bootc_image_password_hash: "{{ bootc_image_user_password_hash }}"
+  when: bootc_image_user_password_hash != ''
+
+- name: Generate password hash from plain text
+  ansible.builtin.set_fact:
+    _bootc_image_password_hash: "{{ bootc_image_user_password | password_hash('sha512') }}"
+  when: bootc_image_user_password_hash == '' and bootc_image_user_password != ''
+
+- name: Fetch SSH keys from GitHub
+  ansible.builtin.uri:
+    url: "https://github.com/{{ bootc_image_user_github }}.keys"
+    return_content: true
+  register: _bootc_image_github_keys
+  when:
+    - bootc_image_output_type == 'qcow2'
+    - bootc_image_user_github != ''
+
+- name: Combine SSH keys from GitHub and explicit list
+  ansible.builtin.set_fact:
+    _bootc_image_ssh_keys: "{{ ((_bootc_image_github_keys.content | default('')) | split('\n') | select('match', '^ssh-') | list) + bootc_image_user_ssh_keys }}"
+  when: bootc_image_output_type == 'qcow2'
+
+- name: Set output subdirectory and filename based on output type
+  ansible.builtin.set_fact:
+    _bootc_image_output_subdir: "{{ 'bootiso' if bootc_image_output_type == 'anaconda-iso' else 'qcow2' }}"
+    _bootc_image_output_filename: "{{ 'install.iso' if bootc_image_output_type == 'anaconda-iso' else 'disk.qcow2' }}"
+
+- name: Construct output path
+  ansible.builtin.set_fact:
+    bootc_image_output_path: "{{ bootc_image_build_context }}/{{ _bootc_image_output_subdir }}/{{ _bootc_image_output_filename }}"
+    bootc_image_config_path: "{{ bootc_image_build_context }}/config.toml"
+
+- name: Create build context directory
+  ansible.builtin.file:
+    path: "{{ bootc_image_build_context }}"
+    state: directory
+    mode: '0755'
+
+- name: Check if output already exists
+  ansible.builtin.stat:
+    path: "{{ bootc_image_output_path }}"
+  register: bootc_image_stat
+
+- name: Remove existing output if force flag is set
+  ansible.builtin.file:
+    path: "{{ bootc_image_output_path }}"
+    state: absent
+  when: bootc_image_force | bool and bootc_image_stat.stat.exists
+  become: true
+
+- name: Render bootc-image-builder config (ISO)
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: "{{ bootc_image_config_path }}"
+    mode: '0600'
+  when: bootc_image_output_type == 'anaconda-iso'
+
+- name: Render bootc-image-builder config (qcow2)
+  ansible.builtin.template:
+    src: config-qcow2.toml.j2
+    dest: "{{ bootc_image_config_path }}"
+    mode: '0600'
+  when: bootc_image_output_type == 'qcow2'
+
+- name: Pull container image
+  containers.podman.podman_image:
+    name: "{{ bootc_image_image }}:{{ bootc_image_tag }}"
+    state: present
+  become: true
+  when: not bootc_image_stat.stat.exists or bootc_image_force | bool
+
+- name: Build command arguments for bootc-image-builder
+  ansible.builtin.set_fact:
+    _bootc_image_command: >-
+      {{
+        ['--type', bootc_image_output_type] +
+        ['--rootfs', bootc_image_rootfs] +
+        [bootc_image_image ~ ':' ~ bootc_image_tag]
+      }}
+
+- name: Create temporary directory for osbuild store
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: bootc-image-builder-store-
+  register: _bootc_image_store_dir
+  become: true
+  when: not bootc_image_stat.stat.exists or bootc_image_force | bool
+
+- name: Run bootc-image-builder
+  containers.podman.podman_container:
+    name: bootc-image-builder
+    image: "{{ bootc_image_builder_image }}"
+    state: started
+    recreate: true
+    rm: true
+    detach: false
+    privileged: true
+    pull: newer
+    security_opt:
+      - label=type:unconfined_t
+    volumes:
+      - "{{ bootc_image_config_path }}:/config.toml:ro"
+      - "{{ bootc_image_build_context }}:/output"
+      - /var/lib/containers/storage:/var/lib/containers/storage
+      - "{{ _bootc_image_store_dir.path }}:/store"
+    command: "{{ _bootc_image_command }}"
+  become: true
+  when: not bootc_image_stat.stat.exists or bootc_image_force | bool
+
+- name: Clean up osbuild store directory
+  ansible.builtin.file:
+    path: "{{ _bootc_image_store_dir.path }}"
+    state: absent
+  become: true
+  when: _bootc_image_store_dir.path is defined
+
+- name: Check if generated output exists
+  ansible.builtin.stat:
+    path: "{{ bootc_image_output_path }}"
+  register: final_output_stat
+
+- name: Fix ownership of generated output
+  ansible.builtin.file:
+    path: "{{ bootc_image_output_path }}"
+    owner: "{{ ansible_facts['user_id'] }}"
+    group: "{{ ansible_facts['user_id'] }}"
+  become: true
+  when: final_output_stat.stat.exists
+
+- name: Display output location
+  ansible.builtin.debug:
+    msg: "{{ bootc_image_output_type | upper }} created at: {{ bootc_image_output_path }}"
+  when: final_output_stat.stat.exists
