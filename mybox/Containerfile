@@ -1,24 +1,144 @@
 ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:43
 FROM ${BASE_IMAGE}
 
+# =============================================================================
+# Layer 1: DNF Configuration + Repositories + System Update
+# =============================================================================
+COPY files/dnf.conf /tmp/dnf-extra.conf
+COPY files/1password.repo /etc/yum.repos.d/1password.repo
+
 RUN <<EORUN
-    set -xeuo pipefail
+    set -euxo pipefail
 
-    # Prevent updating the kernel baked into the parent image,
-    # to avoid needing to take extra steps to turn it back into
-    # a bootable image.
-    echo "exclude=kernel-core kernel" >> /etc/dnf/dnf.conf
-    echo "install_weak_deps=False" >> /etc/dnf/dnf.conf
+    # DNF configuration
+    cat /tmp/dnf-extra.conf >> /etc/dnf/dnf.conf
+    rm /tmp/dnf-extra.conf
 
+    # RPM Fusion (needed for NVIDIA drivers)
+    source /etc/os-release
+    dnf install -y \
+        https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm \
+        https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$VERSION_ID.noarch.rpm
+
+    # Third-party repositories
+    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
+    dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+    dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+    dnf config-manager addrepo --from-repofile=https://github.com/terrapkg/subatomic-repos/raw/main/terra.repo
+    dnf install -y terra-release
+
+    # 1Password CLI repository
+    curl -fsSL https://downloads.1password.com/linux/keys/1password.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
+    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
+
+    # Copr repositories
+    dnf copr enable -y @ai-ml/nvidia-container-toolkit
+    dnf copr enable -y lizardbyte/beta
+    dnf copr enable -y claaj/typst
+    dnf copr enable -y luminoso/k9s
+
+    # System update
     dnf update -y
 EORUN
 
+# =============================================================================
+# Layer 2: Package Installation + NVIDIA Driver Build
+# =============================================================================
 RUN <<EORUN
-    set -xeuo pipefail
+    set -euxo pipefail
 
-    # Inspired by https://github.com/travier/fedora-sysexts/blob/main/1password-gui/Containerfile
-    # Gets 1Password working (relies on /opt/ which won't exist before boot)
-    curl -L "https://downloads.1password.com/linux/tar/stable/$(uname -m)/1password-latest.tar.gz" -o /tmp/1password.tar.gz
+    # Get kernel version from the image (not the build host)
+    KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')
+
+    # Kernel development packages (needed for NVIDIA driver build)
+    dnf install -y \
+        kernel-devel-$KERNEL_UNAME \
+        kernel-devel-matched-$KERNEL_UNAME
+
+    # NVIDIA driver (skip scriptlets - they fail as root, we run akmods manually)
+    dnf install -y --setopt=tsflags=noscripts akmod-nvidia
+
+    # Build NVIDIA kernel module
+    akmods --force --kernels $KERNEL_UNAME
+    depmod $KERNEL_UNAME
+
+    # All other packages
+    dnf install -y \
+        1password-cli \
+        nvidia-container-toolkit \
+        \
+        `# Development tools` \
+        cmake \
+        emacs \
+        fzf \
+        gh \
+        go-task \
+        libtool \
+        python-devel \
+        python-virtualenvwrapper \
+        ripgrep \
+        sqlite \
+        typst \
+        uv \
+        yq \
+        zsh \
+        \
+        `# Virtualization` \
+        libvirt \
+        libvirt-daemon-kvm \
+        qemu-img \
+        qemu-kvm \
+        qemu-system-$(uname -m) \
+        qemu-ui-gtk \
+        quickemu \
+        virt-install \
+        virt-manager \
+        \
+        `# Kubernetes / containers` \
+        docker-ce \
+        k9s \
+        \
+        `# System administration` \
+        age \
+        chezmoi \
+        cockpit \
+        cockpit-machines \
+        cockpit-networkmanager \
+        cockpit-podman \
+        cockpit-storaged \
+        etckeeper \
+        nc \
+        nfs-utils \
+        tailscale \
+        tmux \
+        \
+        `# Desktop applications` \
+        chromium \
+        qt6-qttools \
+        Sunshine \
+        zed \
+        \
+        `# Kerberos / LDAP` \
+        krb5-devel \
+        krb5-workstation \
+        openldap-clients \
+        \
+        `# Document processing` \
+        pandoc
+EORUN
+
+# =============================================================================
+# Layer 3: Custom Installations (1Password GUI + Cursor)
+# =============================================================================
+COPY install-cursor.sh /tmp/
+
+RUN <<EORUN
+    set -euxo pipefail
+
+    # 1Password GUI
+    # Workaround: /opt doesn't exist before boot on atomic systems
+    # See: https://github.com/travier/fedora-sysexts/blob/main/1password-gui/Containerfile
+    curl -fL "https://downloads.1password.com/linux/tar/stable/$(uname -m)/1password-latest.tar.gz" -o /tmp/1password.tar.gz
     mv /opt{,.bak}
     mkdir -p /opt/1Password
     tar -xzf /tmp/1password.tar.gz -C /opt/1Password --strip-components=1
@@ -29,145 +149,33 @@ RUN <<EORUN
     ln -sf /usr/lib/1Password/1Password-Crash-Handler /usr/bin/1Password-Crash-Handler
     chmod 4755 /usr/lib/1Password/chrome-sandbox
     sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
-    rm -rf /opt /tmp/*
+    rm -rf /opt
     mv /opt{.bak,}
-EORUN
 
-RUN <<EORUN
-    set -xeuo pipefail
+    # Cursor IDE
+    bash /tmp/install-cursor.sh
 
-    # 1Password CLI
-    curl -fsSL https://downloads.1password.com/linux/keys/1password.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
-    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
-    cat > /etc/yum.repos.d/1password.repo <<'REPOCONF'
-[1password]
-name=1Password Stable Channel
-baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://downloads.1password.com/linux/keys/1password.asc
-REPOCONF
-    dnf install -y 1password-cli
-EORUN
-
-RUN <<EORUN
-    set -xeuo pipefail
-
-    # Nvidia drivers / container toolkit
-    source /etc/os-release
-
-    dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm
-    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$VERSION_ID.noarch.rpm
-
-    # Install the packages corresponding to the kernel inside of the image,
-    # since uname -r will return the version of the host's kernal
-    export KERNEL_UNAME=$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')
-    dnf install -y kernel-devel-$KERNEL_UNAME kernel-devel-matched-$KERNEL_UNAME
-
-    # Install akmod-nvidia without running scriptlets (they fail as root)
-    # We manually run akmods below to build the kernel module
-    dnf install -y --setopt=tsflags=noscripts akmod-nvidia
-
-    # Prebuild kernel extensions inside of our bootable image
-    akmods --force --kernels $KERNEL_UNAME
-    depmod $KERNEL_UNAME
-
-    dnf copr enable -y @ai-ml/nvidia-container-toolkit
-    dnf install -y nvidia-container-toolkit
-EORUN
-
-ADD install-cursor.sh /tmp/
-RUN bash /tmp/install-cursor.sh
-
-RUN <<EORUN
-    set -xeuo pipefail
-
-    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
-    dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
-    dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
-    dnf config-manager addrepo --from-repofile=https://github.com/terrapkg/subatomic-repos/raw/main/terra.repo
-
-    # Need to install here before we install Zed down below
-    dnf install -y terra-release
-
-    dnf copr enable -y lizardbyte/beta
-    dnf copr enable -y claaj/typst
-    dnf copr enable -y luminoso/k9s
-
-    dnf install -y \
-        Sunshine \
-        age \
-        chezmoi \
-        chromium \
-        cmake \
-        cockpit \
-        cockpit-machines \
-        cockpit-networkmanager \
-        cockpit-podman \
-        cockpit-storaged \
-        docker-ce \
-        emacs \
-        etckeeper \
-        fzf \
-        gh \
-        go-task \
-        k9s \
-        krb5-devel \
-        krb5-workstation \
-        libtool \
-        libvirt \
-        libvirt-daemon-kvm \
-        nc \
-        nfs-utils \
-        openldap-clients \
-        pandoc \
-        python-devel \
-        python-virtualenvwrapper \
-        qemu-img \
-        qemu-kvm \
-        qemu-system-$(uname -m) \
-        qemu-ui-gtk \
-        quickemu \
-        qt6-qttools \
-        ripgrep \
-        sqlite \
-        tailscale \
-        tmux \
-        typst \
-        uv \
-        virt-install \
-        virt-manager \
-        yq \
-        zed \
-        zsh
-
+    # Cleanup
     rm -rf /var/cache/* /tmp/*
 EORUN
 
-RUN <<EORUN
-    set -xeuo pipefail
+# =============================================================================
+# Layer 4: System Configuration
+# =============================================================================
+COPY files/00-keyboard.conf /etc/X11/xorg.conf.d/00-keyboard.conf
 
-    # Set dvorak keyboard layout for console
+RUN <<EORUN
+    set -euxo pipefail
+
+    # Dvorak keyboard layout for console
     echo 'KEYMAP=dvorak' > /etc/vconsole.conf
 
-    # Set dvorak for X11/Wayland (KDE uses this)
-    mkdir -p /etc/X11/xorg.conf.d
-    cat > /etc/X11/xorg.conf.d/00-keyboard.conf <<'XKBCONF'
-Section "InputClass"
-        Identifier "system-keyboard"
-        MatchIsKeyboard "on"
-        Option "XkbLayout" "us"
-        Option "XkbVariant" "dvorak"
-EndSection
-XKBCONF
-
-    # Set locale
+    # Locale
     echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 
-    # Set timezone
+    # Timezone
     ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 
-    # Enable cockpit socket
+    # Enable services
     systemctl enable cockpit.socket
 EORUN

@@ -27,9 +27,8 @@ fi
 
 echo "Downloading: $url"
 
-# Make a temp directory for the download
 tmpdir="$(mktemp -d)"
-echo "Download directory: $tmpdir"
+trap 'rm -rf "$tmpdir"' EXIT
 
 # Determine filename from Content-Disposition header
 fname="$(curl -fsSLI "$url" \
@@ -37,9 +36,7 @@ fname="$(curl -fsSLI "$url" \
   | tr -d '\r')"
 : "${fname:=cursor.rpm}"
 
-# Download there
 curl -fL -o "${tmpdir}/${fname}" "$url"
-
 echo "Saved RPM as: ${tmpdir}/${fname}"
 
 rpm -qip "${tmpdir}/${fname}" >/dev/null || {
@@ -47,10 +44,4 @@ rpm -qip "${tmpdir}/${fname}" >/dev/null || {
   exit 1
 }
 
-# Install
-if command -v rpm-ostree >/dev/null 2>&1; then
-  sudo rpm-ostree install "${tmpdir}/${fname}"
-  echo "Reboot required to finalize rpm-ostree install."
-else
-  sudo dnf install -y "${tmpdir}/${fname}"
-fi
+dnf install -y "${tmpdir}/${fname}"
