@@ -164,6 +164,7 @@ EORUN
 # Layer 4: System Configuration
 # =============================================================================
 COPY files/00-keyboard.conf /etc/X11/xorg.conf.d/00-keyboard.conf
+COPY files/apcupsd.conf /etc/apcupsd/apcupsd.conf
 
 RUN <<EORUN
     set -euxo pipefail
@@ -179,4 +180,5 @@ RUN <<EORUN
 
     # Enable services
     systemctl enable cockpit.socket
+    systemctl enable apcupsd
 EORUN
