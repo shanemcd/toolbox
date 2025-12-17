@@ -137,8 +137,11 @@ RUN <<EORUN
     set -euxo pipefail
 
     # 1Password GUI
-    # Workaround: /opt doesn't exist before boot on atomic systems
-    # See: https://github.com/travier/fedora-sysexts/blob/main/1password-gui/Containerfile
+    # We use the tarball instead of the RPM because 1Password does not currently
+    # distribute ARM (aarch64) RPMs - only the tarball supports both architectures.
+    # Additionally, /opt doesn't exist before boot on atomic systems, so we install
+    # to /usr/lib/1Password and create symlinks.
+    # See: https://github.com/fedora-sysexts/community/blob/145f8b218e10fffc8cdb885dda1db9ebf06bf4e1/1password-gui/Containerfile
     curl -fL "https://downloads.1password.com/linux/tar/stable/$(uname -m)/1password-latest.tar.gz" -o /tmp/1password.tar.gz
     mv /opt{,.bak}
     mkdir -p /opt/1Password
