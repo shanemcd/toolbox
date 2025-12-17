@@ -1,6 +1,9 @@
 name: Build Container Images
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
     # Run nightly at 2:00 AM Eastern (7:00 AM UTC)
