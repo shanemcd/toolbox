@@ -129,9 +129,9 @@ RUN <<EORUN
 EORUN
 
 # =============================================================================
-# Layer 3: Custom Installations (1Password GUI + Cursor)
+# Layer 3: Custom Installations (1Password GUI)
 # =============================================================================
-COPY install-cursor.sh /tmp/
+# Note: Cursor is installed via sysext, see SYSEXTS.md
 
 RUN <<EORUN
     set -euxo pipefail
@@ -155,9 +155,6 @@ RUN <<EORUN
     sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
     rm -rf /opt
     mv /opt{.bak,}
-
-    # Cursor IDE
-    bash /tmp/install-cursor.sh
 
     # Cleanup
     rm -rf /var/cache/* /tmp/*
