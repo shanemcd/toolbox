@@ -83,15 +83,7 @@ RUN <<EORUN
         yq \
         zsh \
         \
-        `# Virtualization` \
-        libvirt \
-        libvirt-daemon-kvm \
-        qemu-img \
-        qemu-kvm \
-        qemu-system-$(uname -m) \
-        qemu-ui-gtk \
-        quickemu \
-        virt-install \
+        `# Virtualization (libvirt/qemu via sysext, see docs/SYSEXTS.md)` \
         virt-manager \
         \
         `# Kubernetes / containers` \
