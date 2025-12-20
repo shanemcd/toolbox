@@ -49,12 +49,18 @@
     cmd: "/usr/lib/systemd/systemd-sysupdate update --component {{ item.name }}"
   loop: "{{ sysexts }}"
   become: true
-  register: sysupdate_result
-  changed_when: "'No update available' not in sysupdate_result.stderr"
+  register: sysupdate_results
+  changed_when: "'No update needed' not in sysupdate_results.stderr"
 
-- name: Enable and start systemd-sysext service
+- name: Enable systemd-sysext service
   ansible.builtin.systemd:
     name: systemd-sysext.service
     enabled: true
-    state: started
   become: true
+
+- name: Restart systemd-sysext to apply updates
+  ansible.builtin.systemd:
+    name: systemd-sysext.service
+    state: restarted
+  become: true
+  when: sysupdate_results.results | selectattr('changed', 'equalto', true) | list | length > 0
