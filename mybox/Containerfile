@@ -20,9 +20,6 @@ RUN <<EORUN
         https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm \
         https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$VERSION_ID.noarch.rpm
 
-    # Third-party repositories
-    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
-
     # 1Password CLI repository
     curl -fsSL https://downloads.1password.com/linux/keys/1password.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
@@ -65,9 +62,7 @@ RUN <<EORUN
         \
         `# Development tools` \
         cmake \
-        emacs \
         fzf \
-        gh \
         go-task \
         libtool \
         python-devel \

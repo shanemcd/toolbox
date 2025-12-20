@@ -13,6 +13,8 @@ We're on a journey to remove as much as possible from our bootc container image 
 | libvirt + qemu | `libvirtd-desktop` | fedora | ~500+ MB | Available (F43 not on extensions.fcos.fr yet, use [GitHub releases](https://github.com/fedora-sysexts/fedora/releases/tag/libvirtd-desktop)) |
 | `docker-ce` | `docker-ce` | community | ~98 MB | Available |
 | `tailscale` | `tailscale` | community | ~65 MB | Available |
+| `gh` | `gh` | fedora | ~55 MB | Available |
+| `emacs` | `emacs` | fedora | ~289 MB | Available |
 
 ### Removed from image (no sysext)
 
@@ -32,9 +34,7 @@ These packages have sysext equivalents and could be removed from the Containerfi
 
 | Package | Sysext | Repo | Size | Notes |
 |---------|--------|------|------|-------|
-| `emacs` | `emacs` | fedora | ~289 MB | |
 | `chromium` | `chromium` | fedora | ~335 MB | |
-| `gh` | `gh` | fedora | ~55 MB | |
 | `ripgrep` | `ripgrep` | fedora | small | |
 | `zsh` | `zsh` | fedora | small | |
 | `tmux` | `tmux` | fedora | small | |
