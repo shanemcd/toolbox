@@ -15,6 +15,7 @@ We're on a journey to remove as much as possible from our bootc container image 
 | `tailscale` | `tailscale` | community | ~65 MB | Available |
 | `gh` | `gh` | fedora | ~55 MB | Available |
 | `emacs` | `emacs` | fedora | ~289 MB | Available |
+| `htop` | `htop` | fedora | small | Available |
 
 ### Removed from image (no sysext)
 
