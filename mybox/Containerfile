@@ -22,10 +22,6 @@ RUN <<EORUN
 
     # Third-party repositories
     dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
-    dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
-    dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
-    dnf config-manager addrepo --from-repofile=https://github.com/terrapkg/subatomic-repos/raw/main/terra.repo
-    dnf install -y terra-release
 
     # 1Password CLI repository
     curl -fsSL https://downloads.1password.com/linux/keys/1password.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
@@ -86,11 +82,10 @@ RUN <<EORUN
         `# Virtualization (libvirt/qemu via sysext, see docs/SYSEXTS.md)` \
         virt-manager \
         \
-        `# Kubernetes / containers` \
-        docker-ce \
+        `# Kubernetes / containers (docker-ce via sysext, see docs/SYSEXTS.md)` \
         k9s \
         \
-        `# System administration` \
+        `# System administration (tailscale via sysext, see docs/SYSEXTS.md)` \
         age \
         apcupsd \
         chezmoi \
@@ -102,7 +97,6 @@ RUN <<EORUN
         etckeeper \
         nc \
         nfs-utils \
-        tailscale \
         tmux \
         \
         `# Desktop applications` \

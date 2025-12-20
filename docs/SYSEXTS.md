@@ -10,6 +10,15 @@ We're on a journey to remove as much as possible from our bootc container image 
 |---------|--------|------|------------|-----------|
 | Cursor | `cursor` | community | ~594 MB | [PR #25](https://github.com/fedora-sysexts/community/pull/25) |
 | 1Password GUI | `1password-gui` | community | ~503 MB | Existing (aarch64: [PR #26](https://github.com/fedora-sysexts/community/pull/26)) |
+| libvirt + qemu | `libvirtd-desktop` | fedora | ~500+ MB | Available (F43 not on extensions.fcos.fr yet, use [GitHub releases](https://github.com/fedora-sysexts/fedora/releases/tag/libvirtd-desktop)) |
+| `docker-ce` | `docker-ce` | community | ~98 MB | Available |
+| `tailscale` | `tailscale` | community | ~65 MB | Available |
+
+### Removed from image (no sysext)
+
+| Package | Size | Notes |
+|---------|------|-------|
+| `zed` | ~357 MB | Removed entirely, install via Flatpak or manually if needed |
 
 ### Upstream contributions
 
@@ -29,10 +38,7 @@ These packages have sysext equivalents and could be removed from the Containerfi
 | `ripgrep` | `ripgrep` | fedora | small | |
 | `zsh` | `zsh` | fedora | small | |
 | `tmux` | `tmux` | fedora | small | |
-| `docker-ce` | `docker-ce` | community | ~98 MB | |
-| `tailscale` | `tailscale` | community | ~65 MB | |
 | `1password-cli` | `1password-cli` | community | small | |
-| libvirt + qemu | `libvirtd-desktop` | fedora | ~500+ MB | Large savings potential |
 
 ### Must stay in Containerfile
 
@@ -50,11 +56,9 @@ These cannot be sysexts due to technical limitations:
 
 | Package | Size | Notes |
 |---------|------|-------|
-| `zed` | ~357 MB | Could contribute |
 | `pandoc` | ~213 MB | Could contribute |
 | `k9s` | ~178 MB | Could contribute |
-| `Sunshine` | ? | Could contribute |
-| `quickemu` | ? | |
+| `Sunshine` | ? | WIP: sysext created in community repo, pending PR |
 
 ## Quick Reference
 
