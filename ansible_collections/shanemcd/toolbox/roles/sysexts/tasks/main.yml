@@ -1,0 +1,60 @@
+---
+- name: Create extensions directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /var/lib/extensions
+    - /var/lib/extensions.d
+  become: true
+
+- name: Restore SELinux context on extensions directories
+  ansible.builtin.command:
+    cmd: restorecon -RFv /var/lib/extensions /var/lib/extensions.d
+  become: true
+  changed_when: false
+
+- name: Create sysupdate config directories
+  ansible.builtin.file:
+    path: "/etc/sysupdate.{{ item.name }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ sysexts }}"
+  become: true
+
+- name: Restore SELinux context on sysupdate directories
+  ansible.builtin.command:
+    cmd: "restorecon -RFv /etc/sysupdate.{{ item.name }}.d"
+  loop: "{{ sysexts }}"
+  become: true
+  changed_when: false
+
+- name: Download sysupdate configs
+  ansible.builtin.get_url:
+    url: "{{ sysexts_base_url }}/{{ item.repo }}/{{ item.name }}.conf"
+    dest: "/etc/sysupdate.{{ item.name }}.d/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ sysexts }}"
+  become: true
+
+- name: Update system extensions
+  ansible.builtin.command:
+    cmd: "/usr/lib/systemd/systemd-sysupdate update --component {{ item.name }}"
+  loop: "{{ sysexts }}"
+  become: true
+  register: sysupdate_result
+  changed_when: "'No update available' not in sysupdate_result.stderr"
+
+- name: Enable and start systemd-sysext service
+  ansible.builtin.systemd:
+    name: systemd-sysext.service
+    enabled: true
+    state: started
+  become: true

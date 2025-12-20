@@ -1,0 +1,22 @@
+---
+# List of system extensions to install
+# These are downloaded from extensions.fcos.fr via systemd-sysupdate
+# repo: "fedora" or "community"
+sysexts:
+  - name: 1password-gui
+    repo: community
+  - name: docker-ce
+    repo: community
+  - name: emacs
+    repo: fedora
+  - name: gh
+    repo: fedora
+  - name: htop
+    repo: fedora
+  - name: libvirtd-desktop
+    repo: fedora
+  - name: tailscale
+    repo: community
+
+# Not yet available from extensions.fcos.fr (install manually):
+# - cursor (pending PR: https://github.com/fedora-sysexts/community/pull/25)
