@@ -9,6 +9,7 @@ We're on a journey to remove as much as possible from our bootc container image 
 | Package | Sysext | Repo | Size Saved | PR/Status |
 |---------|--------|------|------------|-----------|
 | Cursor | `cursor` | community | ~594 MB | [PR #25](https://github.com/fedora-sysexts/community/pull/25) |
+| 1Password GUI | `1password-gui` | community | ~503 MB | Existing (aarch64: [PR #26](https://github.com/fedora-sysexts/community/pull/26)) |
 
 ### Upstream contributions
 
@@ -31,7 +32,6 @@ These packages have sysext equivalents and could be removed from the Containerfi
 | `docker-ce` | `docker-ce` | community | ~98 MB | |
 | `tailscale` | `tailscale` | community | ~65 MB | |
 | `1password-cli` | `1password-cli` | community | small | |
-| 1Password GUI | `1password-gui` | community | ~503 MB | aarch64 PR #26 pending |
 | libvirt + qemu | `libvirtd-desktop` | fedora | ~500+ MB | Large savings potential |
 
 ### Must stay in Containerfile
