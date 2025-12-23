@@ -113,6 +113,7 @@ EORUN
 # =============================================================================
 # Note: Cursor and 1Password GUI are installed via sysext, see docs/SYSEXTS.md
 COPY files/00-keyboard.conf /etc/X11/xorg.conf.d/00-keyboard.conf
+COPY files/99-udp-buffers.conf /etc/sysctl.d/99-udp-buffers.conf
 COPY files/apcupsd.conf /etc/apcupsd/apcupsd.conf
 
 RUN <<EORUN
