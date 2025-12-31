@@ -64,11 +64,13 @@ RUN <<EORUN
         cmake \
         fzf \
         go-task \
+        just \
         libtool \
         python-devel \
         python-virtualenvwrapper \
         ripgrep \
         sqlite \
+        strace \
         typst \
         uv \
         yq \
@@ -89,6 +91,7 @@ RUN <<EORUN
         cockpit-networkmanager \
         cockpit-podman \
         cockpit-storaged \
+        erofs-utils \
         etckeeper \
         nc \
         nfs-utils \
@@ -96,6 +99,8 @@ RUN <<EORUN
         \
         `# Desktop applications` \
         chromium \
+        kaccounts-integration \
+        kmail \
         qt6-qttools \
         Sunshine \
         \
