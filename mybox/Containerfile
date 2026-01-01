@@ -66,6 +66,7 @@ RUN <<EORUN
         go-task \
         just \
         libtool \
+        moreutils \
         python-devel \
         python-virtualenvwrapper \
         ripgrep \
