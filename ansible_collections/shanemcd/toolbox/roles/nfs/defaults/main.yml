@@ -1,6 +1,6 @@
 ---
 # Path to export via NFS
-nfs_export_path: /mnt/media
+nfs_export_path: "{{ ansible_facts['env']['HOME'] }}/media"
 
 # List of clients allowed to access the NFS share
 # Examples:

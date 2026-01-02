@@ -1,6 +1,5 @@
 ---
 - name: Configure NFS server for media sharing
   hosts: localhost
-  connection: local
-  roles:
+  connection: local roles:
     - nfs
