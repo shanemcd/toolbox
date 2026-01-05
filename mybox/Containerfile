@@ -100,8 +100,7 @@ RUN <<EORUN
         \
         `# Desktop applications` \
         chromium \
-        kaccounts-integration \
-        kmail \
+        thunderbird \
         qt6-qttools \
         Sunshine \
         \
