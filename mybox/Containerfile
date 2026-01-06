@@ -20,6 +20,11 @@ RUN <<EORUN
         https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$VERSION_ID.noarch.rpm \
         https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$VERSION_ID.noarch.rpm
 
+    # Third-party repositories
+    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
+    dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+    dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+
     # 1Password CLI repository
     curl -fsSL https://downloads.1password.com/linux/keys/1password.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-1password
@@ -62,7 +67,9 @@ RUN <<EORUN
         \
         `# Development tools` \
         cmake \
+        emacs \
         fzf \
+        gh \
         go-task \
         just \
         libtool \
@@ -77,13 +84,22 @@ RUN <<EORUN
         yq \
         zsh \
         \
-        `# Virtualization (libvirt/qemu via sysext, see docs/SYSEXTS.md)` \
+        `# Virtualization` \
+        libvirt \
+        libvirt-daemon-kvm \
+        qemu-img \
+        qemu-kvm \
+        qemu-system-$(uname -m) \
+        qemu-ui-gtk \
+        quickemu \
+        virt-install \
         virt-manager \
         \
-        `# Kubernetes / containers (docker-ce via sysext, see docs/SYSEXTS.md)` \
+        `# Kubernetes / containers` \
+        docker-ce \
         k9s \
         \
-        `# System administration (tailscale via sysext, see docs/SYSEXTS.md)` \
+        `# System administration` \
         age \
         apcupsd \
         chezmoi \
@@ -96,6 +112,7 @@ RUN <<EORUN
         etckeeper \
         nc \
         nfs-utils \
+        tailscale \
         tmux \
         \
         `# Desktop applications` \
@@ -114,9 +131,43 @@ RUN <<EORUN
 EORUN
 
 # =============================================================================
-# Layer 3: System Configuration
+# Layer 3: Custom Installations (1Password GUI + Cursor)
 # =============================================================================
-# Note: Cursor and 1Password GUI are installed via sysext, see docs/SYSEXTS.md
+COPY install-cursor.sh /tmp/
+
+RUN <<EORUN
+    set -euxo pipefail
+
+    # 1Password GUI
+    # We use the tarball instead of the RPM because 1Password does not currently
+    # distribute ARM (aarch64) RPMs - only the tarball supports both architectures.
+    # Additionally, /opt doesn't exist before boot on atomic systems, so we install
+    # to /usr/lib/1Password and create symlinks.
+    # See: https://github.com/fedora-sysexts/community/blob/145f8b218e10fffc8cdb885dda1db9ebf06bf4e1/1password-gui/Containerfile
+    curl -fL "https://downloads.1password.com/linux/tar/stable/$(uname -m)/1password-latest.tar.gz" -o /tmp/1password.tar.gz
+    mv /opt{,.bak}
+    mkdir -p /opt/1Password
+    tar -xzf /tmp/1password.tar.gz -C /opt/1Password --strip-components=1
+    sh /opt/1Password/after-install.sh
+    mv /opt/1Password /usr/lib/1Password
+    ln -sf /usr/lib/1Password/1password /usr/bin/1password
+    ln -sf /usr/lib/1Password/1Password-BrowserSupport /usr/bin/1Password-BrowserSupport
+    ln -sf /usr/lib/1Password/1Password-Crash-Handler /usr/bin/1Password-Crash-Handler
+    chmod 4755 /usr/lib/1Password/chrome-sandbox
+    sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
+    rm -rf /opt
+    mv /opt{.bak,}
+
+    # Cursor IDE
+    bash /tmp/install-cursor.sh
+
+    # Cleanup
+    rm -rf /var/cache/* /tmp/*
+EORUN
+
+# =============================================================================
+# Layer 4: System Configuration
+# =============================================================================
 COPY files/00-keyboard.conf /etc/X11/xorg.conf.d/00-keyboard.conf
 COPY files/99-udp-buffers.conf /etc/sysctl.d/99-udp-buffers.conf
 COPY files/apcupsd.conf /etc/apcupsd/apcupsd.conf

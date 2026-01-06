@@ -1,8 +1,0 @@
----
-- name: Install system extensions
-  hosts: localhost
-  connection: local
-  gather_facts: false
-
-  roles:
-    - shanemcd.toolbox.sysexts
