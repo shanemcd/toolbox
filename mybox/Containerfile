@@ -91,6 +91,8 @@ RUN <<EORUN
         qemu-kvm \
         qemu-system-$(uname -m) \
         qemu-ui-gtk \
+        qemu-user-binfmt \
+        qemu-user-static \
         quickemu \
         virt-install \
         virt-manager \
