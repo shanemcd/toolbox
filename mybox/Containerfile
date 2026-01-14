@@ -180,11 +180,11 @@ RUN <<EORUN
     # TODO: Remove once Kinoite images include the fix from:
     # https://pagure.io/workstation-ostree-config/c/5b4bba7d2555006ea116f6f68d744a32489e1ee5
     # The upstream config references gnome-remote-desktop user which doesn't exist on Kinoite
-    cat > /usr/lib/tmpfiles.d/90-atomic-desktops-ownership-fixes.conf << 'EOF'
-    Z /var/lib/passim - passim passim
-    Z /var/log/passim - passim passim
-    Z /etc/colord/    - colord colord
-    EOF
+    cat > /usr/lib/tmpfiles.d/90-atomic-desktops-ownership-fixes.conf <<'EOF'
+Z /var/lib/passim - passim passim
+Z /var/log/passim - passim passim
+Z /etc/colord/    - colord colord
+EOF
 
     # Dvorak keyboard layout for console
     echo 'KEYMAP=dvorak' > /etc/vconsole.conf
