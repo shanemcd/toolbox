@@ -98,6 +98,7 @@ RUN <<EORUN
         virt-manager \
         \
         `# Kubernetes / containers` \
+        docker-buildx-plugin \
         docker-ce \
         k9s \
         \
@@ -114,6 +115,7 @@ RUN <<EORUN
         etckeeper \
         nc \
         nfs-utils \
+        shairport-sync \
         tailscale \
         tmux \
         \
@@ -198,4 +200,5 @@ EOF
     # Enable services
     systemctl enable cockpit.socket
     systemctl enable apcupsd
+    systemctl enable shairport-sync
 EORUN
