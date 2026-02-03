@@ -161,7 +161,7 @@ RUN <<EORUN
     sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
     rm -rf /opt
     mv /opt{.bak,}
-    1password --version
+    1password --version --no-sandbox
 
     # Cursor IDE
     bash /tmp/install-cursor.sh
