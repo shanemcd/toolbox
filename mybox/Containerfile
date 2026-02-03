@@ -149,6 +149,7 @@ RUN <<EORUN
     # to /usr/lib/1Password and create symlinks.
     # See: https://github.com/fedora-sysexts/community/blob/145f8b218e10fffc8cdb885dda1db9ebf06bf4e1/1password-gui/Containerfile
     curl -fL "https://downloads.1password.com/linux/tar/stable/$(uname -m)/1password-latest.tar.gz" -o /tmp/1password.tar.gz
+    echo "1Password version: $(tar -tzf /tmp/1password.tar.gz | head -1 | grep -oP '1password-\K[0-9]+\.[0-9]+\.[0-9]+')"
     mv /opt{,.bak}
     mkdir -p /opt/1Password
     tar -xzf /tmp/1password.tar.gz -C /opt/1Password --strip-components=1
@@ -161,7 +162,6 @@ RUN <<EORUN
     sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
     rm -rf /opt
     mv /opt{.bak,}
-    1password --version --no-sandbox
 
     # Cursor IDE
     bash /tmp/install-cursor.sh
