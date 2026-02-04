@@ -202,4 +202,7 @@ EOF
     systemctl enable cockpit.socket
     systemctl enable apcupsd
     systemctl enable shairport-sync
+
+    # Sunshine: Enable KMS capture for Wayland (requires cap_sys_admin)
+    setcap cap_sys_admin+p /usr/bin/sunshine
 EORUN
