@@ -203,6 +203,33 @@ EOF
     systemctl enable apcupsd
     systemctl enable shairport-sync
 
-    # Sunshine: Enable KMS capture for Wayland (requires cap_sys_admin)
-    setcap cap_sys_admin+p /usr/bin/sunshine
+    # Sunshine KMS capture setup:
+    # - /usr is read-only (composefs), so we can't setcap on /usr/bin/sunshine
+    # - Copy to /usr/local/bin (symlink to /var/usrlocal, writable) and setcap there
+    # - Override the user service to use the local copy
+
+    # System service: copy sunshine and set capability at boot
+    cat > /usr/lib/systemd/system/sunshine-setcap.service <<'EOF'
+[Unit]
+Description=Setup Sunshine with CAP_SYS_ADMIN for KMS capture
+After=local-fs.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'mkdir -p /usr/local/bin && cp /usr/bin/sunshine /usr/local/bin/sunshine && /usr/sbin/setcap cap_sys_admin+p /usr/local/bin/sunshine'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable sunshine-setcap.service
+
+    # Global user service override: use /usr/local/bin/sunshine
+    mkdir -p /usr/lib/systemd/user/sunshine.service.d
+    cat > /usr/lib/systemd/user/sunshine.service.d/override.conf <<'EOF'
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/sunshine
+EOF
 EORUN
