@@ -214,7 +214,7 @@ Before=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'mkdir -p /usr/local/bin && cp /usr/bin/sunshine /usr/local/bin/sunshine && /usr/sbin/setcap cap_sys_admin+p /usr/local/bin/sunshine'
+ExecStart=/bin/bash -c 'mkdir -p /usr/local/bin && cp /usr/bin/sunshine /usr/local/bin/sunshine && /usr/sbin/setcap cap_sys_admin+ep /usr/local/bin/sunshine'
 RemainAfterExit=yes
 
 [Install]
