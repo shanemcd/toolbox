@@ -1,0 +1,8 @@
+---
+- name: Deploy Jellyfin media server as a Podman quadlet
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - jellyfin

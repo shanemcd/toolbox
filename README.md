@@ -167,3 +167,26 @@ ansible-playbook shanemcd.toolbox.jetkvm_tailscale \
 2. Installs tailscaled daemon with init script (`S22tailscale`)
 3. Configures persistent state in `/userdata/tailscale-state`
 4. Authenticates using provided auth key
+
+### Services
+
+#### `jellyfin`
+Deploy Jellyfin media server as a rootless Podman container managed by a user-scoped systemd quadlet.
+
+```bash
+ansible-playbook shanemcd.toolbox.jellyfin -v
+```
+
+**What it does:**
+1. Creates `~/media` directory (shared with the NFS role)
+2. Deploys a quadlet `.container` file to `~/.config/containers/systemd/`
+3. Enables `loginctl linger` so the service runs without an active login session
+4. Starts and enables the `jellyfin` systemd user service
+
+**Options:**
+- `jellyfin_image` - Container image (default: `docker.io/jellyfin/jellyfin:latest`)
+- `jellyfin_web_port` - HTTP port (default: `8096`)
+- `jellyfin_media_path` - Media library path (default: `~/media`)
+- `jellyfin_media_readonly` - Mount media read-only (default: `true`)
+- `jellyfin_auto_update` - Enable `podman auto-update` (default: `true`)
+- `jellyfin_enable_linger` - Enable loginctl linger (default: `true`)

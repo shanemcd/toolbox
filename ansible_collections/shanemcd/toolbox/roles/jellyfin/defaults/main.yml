@@ -1,0 +1,27 @@
+---
+# Container image
+jellyfin_image: docker.io/jellyfin/jellyfin:latest
+
+# Enable podman auto-update for the container
+jellyfin_auto_update: true
+
+# Web UI port (HTTP)
+jellyfin_web_port: 8096
+
+# Optional ports (set to a port number to enable)
+# jellyfin_https_port: 8920
+# jellyfin_discovery_port_dlna: 1900
+# jellyfin_discovery_port_client: 7359
+
+# Media library path on the host
+jellyfin_media_path: "{{ ansible_facts['env']['HOME'] }}/media"
+
+# Mount media as read-only
+jellyfin_media_readonly: true
+
+# Named Podman volumes for persistent data
+jellyfin_config_volume: jellyfin-config
+jellyfin_cache_volume: jellyfin-cache
+
+# Enable loginctl linger so the user service runs without an active login session
+jellyfin_enable_linger: true

@@ -1,0 +1,37 @@
+---
+- name: Ensure media directory exists
+  ansible.builtin.file:
+    path: "{{ jellyfin_media_path }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure quadlet directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/containers/systemd"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Jellyfin quadlet container file
+  ansible.builtin.template:
+    src: jellyfin.container.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/containers/systemd/jellyfin.container"
+    mode: "0644"
+  notify: Restart Jellyfin
+
+- name: Enable loginctl linger
+  ansible.builtin.command:
+    cmd: loginctl enable-linger {{ ansible_facts['env']['USER'] }}
+  changed_when: false
+  when: jellyfin_enable_linger
+
+- name: Reload systemd user daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+
+- name: Enable and start Jellyfin service
+  ansible.builtin.systemd_service:
+    name: jellyfin
+    scope: user
+    enabled: true
+    state: started

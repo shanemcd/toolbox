@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+
+[Container]
+Image={{ jellyfin_image }}
+{% if jellyfin_auto_update %}
+AutoUpdate=registry
+{% endif %}
+PublishPort={{ jellyfin_web_port }}:8096
+{% if jellyfin_https_port is defined %}
+PublishPort={{ jellyfin_https_port }}:8920
+{% endif %}
+{% if jellyfin_discovery_port_dlna is defined %}
+PublishPort={{ jellyfin_discovery_port_dlna }}:1900/udp
+{% endif %}
+{% if jellyfin_discovery_port_client is defined %}
+PublishPort={{ jellyfin_discovery_port_client }}:7359/udp
+{% endif %}
+Volume={{ jellyfin_config_volume }}:/config:Z
+Volume={{ jellyfin_cache_volume }}:/cache:Z
+Volume={{ jellyfin_media_path }}:/media:{% if jellyfin_media_readonly %}ro,{% endif %}Z
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
