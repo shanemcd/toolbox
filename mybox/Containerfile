@@ -132,6 +132,11 @@ RUN <<EORUN
         \
         `# Document processing` \
         pandoc
+
+    # Workaround: non-ASCII filename breaks ostree container image deploy
+    # under the C locale (libarchive can't convert UTF-8 to ASCII).
+    # Upstream fix: https://github.com/rhinstaller/anaconda/pull/6923
+    rm -f /usr/share/doc/just/README.中文.md
 EORUN
 
 # =============================================================================
