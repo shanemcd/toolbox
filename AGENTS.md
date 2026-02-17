@@ -258,18 +258,40 @@ ansible-playbook shanemcd.toolbox.fedora_iso -v \
 
 ### VM Testing
 
-Boot test ISO in QEMU (installs then reboots to test):
+There are two ways to test images: raw QEMU (no libvirt required) and virt-install (uses libvirt).
+
+#### QEMU (direct, no libvirt)
+
+Boot mkksiso ISO in QEMU (two-phase: install from CD, then boot from disk):
 ```bash
-make qemu
+make qemu-mkksiso
 ```
 
-Create libvirt VM:
+Boot bootc-image-builder ISO in QEMU (allocates 24GB RAM for container extraction):
+```bash
+make qemu-bootc-iso
+```
+
+Boot bootc-image-builder qcow2 directly in QEMU (no installation step, fastest option):
+```bash
+make qemu-bootc-qcow2
+```
+
+#### libvirt (virt-install)
+
+Create libvirt VM from mkksiso ISO:
 ```bash
 make virt-install          # Non-interactive
-make virt-install-console  # With console
+make virt-install-console  # With interactive console
+make virt-install-embedded # With embedded container (offline)
 ```
 
-Create VM with NVIDIA GPU passthrough:
+Create libvirt VM from bootc-image-builder ISO (24GB RAM):
+```bash
+make virt-install-bootc
+```
+
+Create VM with NVIDIA GPU passthrough (works with any virt-install target):
 ```bash
 make virt-install GPU_PASSTHROUGH=yes
 # Auto-detects NVIDIA GPU PCI addresses
@@ -277,7 +299,8 @@ make virt-install GPU_PASSTHROUGH=yes
 # VM will be named fedora-mybox-gpu
 ```
 
-Manage VMs:
+#### VM lifecycle
+
 ```bash
 make virt-start            # Start existing VM
 make virt-destroy          # Remove VM (preserves disk)

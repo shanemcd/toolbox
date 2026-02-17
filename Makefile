@@ -1,3 +1,7 @@
+# ==============================================================================
+# Variables & Configuration
+# ==============================================================================
+
 MYBOX_IMAGE ?= quay.io/shanemcd/mybox
 MYBOX_VERSION ?= $(shell date "+%Y%m%d")
 CONTAINER_RUNTIME ?= podman
@@ -7,9 +11,10 @@ VM_MEMORY ?= 10000
 VM_VCPUS ?= 4
 GPU_PASSTHROUGH ?= no
 BOOTC_USE_ALL_DISKS ?= no
+BOOTC_FORCE ?= no
 LIBVIRT_IMAGES_DIR ?= /var/lib/libvirt/images
 
-# Desktop environment selection
+# Desktop environment: "kinoite" (KDE) or "silverblue" (GNOME)
 DESKTOP ?= kinoite
 FEDORA_VERSION ?= 43
 BASE_IMAGE_KINOITE := quay.io/fedora/fedora-kinoite:$(FEDORA_VERSION)
@@ -21,13 +26,11 @@ else
   BASE_IMAGE := $(BASE_IMAGE_KINOITE)
 endif
 
-# Append -gpu suffix to VM name if GPU passthrough is enabled
+# GPU passthrough configuration
 ifeq ($(GPU_PASSTHROUGH),yes)
   VM_NAME_FULL := $(VM_NAME)-gpu
-  # Auto-detect NVIDIA GPU PCI addresses
   NVIDIA_VGA_ADDR := $(shell lspci -D | grep -i "NVIDIA" | grep -i "VGA" | awk '{print $$1}')
   NVIDIA_AUDIO_ADDR := $(shell lspci -D | grep -i "NVIDIA" | grep -i "Audio" | awk '{print $$1}')
-  # Error if no NVIDIA GPU found
   ifeq ($(NVIDIA_VGA_ADDR),)
     $(error GPU_PASSTHROUGH=yes but no NVIDIA VGA device found. Check 'lspci | grep -i nvidia')
   endif
@@ -43,11 +46,10 @@ else
   VIRT_INSTALL_VIDEO := qxl
 endif
 
+# Architecture and QEMU detection
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
-
 ARCH := $(if $(filter $(UNAME_M),arm64 aarch64),aarch64,$(UNAME_M))
-
 QEMU_BIN ?= qemu-system-$(ARCH)
 
 ifeq ($(UNAME_S),Darwin)
@@ -72,6 +74,17 @@ else
   QEMU_MACHINE ?=
   QEMU_EXTRA_DEVICES ?=
 endif
+
+# bootc-image-builder disk configuration
+ifeq ($(BOOTC_USE_ALL_DISKS),yes)
+  BOOTC_DISK_ARGS := -e bootc_image_use_all_disks=yes
+else
+  BOOTC_DISK_ARGS := -e bootc_image_target_disk_id=virtio-f1ce90
+endif
+
+# ==============================================================================
+# Container Image Build & Push
+# ==============================================================================
 
 .PHONY: mybox
 mybox: build-mybox
@@ -170,96 +183,11 @@ update-mybox-kinoite:
 update-mybox-silverblue:
 	$(MAKE) update-mybox DESKTOP=silverblue
 
-vm-disk.qcow2:
-	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 100G
+# ==============================================================================
+# Image Generation (ISOs & Disk Images)
+# ==============================================================================
 
-.PHONY: qemu
-qemu: vm-disk.qcow2 context/custom.iso
-	@# First boot: install OS from ISO, boot from cdrom
-	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
-		-m 10000 \
-		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
-		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
-		-boot d \
-		-cdrom $(CURDIR)/context/custom.iso \
-		$(QEMU_EXTRA_DEVICES)
-
-	@# Second boot: boot from disk
-	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
-		-m 10000 \
-		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
-		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
-		$(QEMU_EXTRA_DEVICES)
-
-.PHONY: virt-install
-virt-install: vm-disk.qcow2 context/custom.iso
-	@echo "Creating libvirt VM: $(VM_NAME_FULL)"
-	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
-	ansible-playbook shanemcd.toolbox.virt_install -K \
-		-e virt_install_vm_name=$(VM_NAME_FULL) \
-		-e virt_install_memory=$(VM_MEMORY) \
-		-e virt_install_vcpus=$(VM_VCPUS) \
-		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
-		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
-		-e virt_install_iso_source=$(CURDIR)/context/custom.iso \
-		-e virt_install_iso_dest=$(LIBVIRT_IMAGES_DIR)/custom.iso \
-		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
-		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
-		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
-		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
-		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
-		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
-
-.PHONY: virt-install-embedded
-virt-install-embedded: vm-disk.qcow2 context/custom-embedded.iso
-	@echo "Creating libvirt VM with embedded container: $(VM_NAME_FULL)"
-	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
-	ansible-playbook shanemcd.toolbox.virt_install -K \
-		-e virt_install_vm_name=$(VM_NAME_FULL) \
-		-e virt_install_memory=$(VM_MEMORY) \
-		-e virt_install_vcpus=$(VM_VCPUS) \
-		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
-		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
-		-e virt_install_iso_source=$(CURDIR)/context/custom-embedded.iso \
-		-e virt_install_iso_dest=$(LIBVIRT_IMAGES_DIR)/custom-embedded.iso \
-		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
-		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
-		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
-		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
-		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
-		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
-
-.PHONY: virt-install-console
-virt-install-console: vm-disk.qcow2 context/custom.iso
-	@echo "Creating libvirt VM with console: $(VM_NAME_FULL)"
-	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME_FULL) --nvram"
-	sudo cp -f $(CURDIR)/context/custom.iso $(LIBVIRT_IMAGES_DIR)/custom.iso
-	sudo cp -f $(CURDIR)/vm-disk.qcow2 $(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2
-	virt-install \
-		--connect qemu:///system \
-		--name $(VM_NAME_FULL) \
-		--memory $(VM_MEMORY) \
-		--vcpus $(VM_VCPUS) \
-		--disk path=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
-		--disk $(LIBVIRT_IMAGES_DIR)/custom.iso,device=cdrom,bus=sata \
-		--os-variant fedora-unknown \
-		$(VIRT_INSTALL_GRAPHICS) \
-		$(VIRT_INSTALL_VIDEO) \
-		$(VIRT_INSTALL_BOOT) \
-		$(VIRT_INSTALL_HOSTDEV)
-
-.PHONY: virt-destroy
-virt-destroy:
-	@echo "Destroying VM: $(VM_NAME_FULL)"
-	-virsh -c qemu:///system destroy $(VM_NAME_FULL)
-	-virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram
-	@echo "VM destroyed. Disk file preserved at: $(CURDIR)/vm-disk.qcow2"
-
-.PHONY: virt-start
-virt-start:
-	@echo "Starting VM: $(VM_NAME_FULL)"
-	virsh -c qemu:///system start $(VM_NAME_FULL)
-	virt-viewer -c qemu:///system $(VM_NAME_FULL) &
+# --- mkksiso-based ISOs (network install, pulls container from registry) ------
 
 context:
 	mkdir -p $@
@@ -287,18 +215,10 @@ context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 		-e fedora_iso_container_archive=mybox-$(DESKTOP)-$(ARCH).tar \
 		$(ANSIBLE_EXTRA_ARGS)
 
-# bootc-image-builder based image generation
+# --- bootc-image-builder (offline install, container embedded in image) -------
+
 output:
 	mkdir -p $@
-
-ifeq ($(BOOTC_USE_ALL_DISKS),yes)
-  BOOTC_DISK_ARGS := -e bootc_image_use_all_disks=yes
-else
-  BOOTC_DISK_ARGS := -e bootc_image_target_disk_id=virtio-f1ce90
-endif
-
-# Set to "yes" to force rebuild of bootc ISO even if it exists
-BOOTC_FORCE ?= no
 
 .PHONY: bootc-iso
 bootc-iso: output/bootiso/install.iso
@@ -321,6 +241,132 @@ output/qcow2/disk.qcow2: output
 		-e bootc_image_user_password=fortestingonly \
 		$(ANSIBLE_EXTRA_ARGS)
 
+# ==============================================================================
+# VM Testing (QEMU & libvirt)
+# ==============================================================================
+
+# --- Shared -------------------------------------------------------------------
+
+vm-disk.qcow2:
+	qemu-img create -f qcow2 $(CURDIR)/vm-disk.qcow2 100G
+
+# --- QEMU (direct, no libvirt) ------------------------------------------------
+
+# Boot mkksiso ISO in QEMU. Two-phase: install from CD, then boot from disk.
+.PHONY: qemu-mkksiso
+qemu-mkksiso: vm-disk.qcow2 context/custom.iso
+	@# Phase 1: install OS from ISO
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
+		-m $(VM_MEMORY) \
+		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		-boot d \
+		-cdrom $(CURDIR)/context/custom.iso \
+		$(QEMU_EXTRA_DEVICES)
+
+	@# Phase 2: boot from disk
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
+		-m $(VM_MEMORY) \
+		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		$(QEMU_EXTRA_DEVICES)
+
+# Boot bootc-image-builder ISO in QEMU. Requires 24GB+ RAM for installation.
+# Two-phase: install from CD, then boot from disk.
+# Override BOOTC_ISO to use a different ISO (e.g. a patched one).
+BOOTC_ISO ?= output/bootiso/install.iso
+
+.PHONY: qemu-bootc-iso
+qemu-bootc-iso: vm-disk.qcow2 $(BOOTC_ISO)
+	@# Phase 1: install OS from bootc ISO (needs 24GB+ RAM to extract container)
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
+		-m 24000 \
+		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		-boot d \
+		-cdrom $(CURDIR)/$(BOOTC_ISO) \
+		$(QEMU_EXTRA_DEVICES)
+
+	@# Phase 2: boot from disk
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
+		-m $(VM_MEMORY) \
+		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
+		-drive file=$(CURDIR)/vm-disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		$(QEMU_EXTRA_DEVICES)
+
+# Boot bootc-image-builder qcow2 directly in QEMU. No installation step needed.
+# This is the fastest way to test a bootc image in a VM.
+.PHONY: qemu-bootc-qcow2
+qemu-bootc-qcow2: output/qcow2/disk.qcow2
+	$(QEMU_BIN) $(QEMU_ACCEL) $(QEMU_MACHINE) \
+		-m $(VM_MEMORY) \
+		-device virtio-blk-pci,drive=primary_disk,serial="f1ce90" \
+		-drive file=$(CURDIR)/output/qcow2/disk.qcow2,format=qcow2,if=none,id=primary_disk \
+		$(QEMU_EXTRA_DEVICES)
+
+# --- libvirt (virt-install) ---------------------------------------------------
+
+# Create libvirt VM from mkksiso ISO.
+.PHONY: virt-install
+virt-install: vm-disk.qcow2 context/custom.iso
+	@echo "Creating libvirt VM: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
+	ansible-playbook shanemcd.toolbox.virt_install -K \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=$(VM_MEMORY) \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
+		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_iso_source=$(CURDIR)/context/custom.iso \
+		-e virt_install_iso_dest=$(LIBVIRT_IMAGES_DIR)/custom.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
+
+# Create libvirt VM from mkksiso ISO with embedded container (offline install).
+.PHONY: virt-install-embedded
+virt-install-embedded: vm-disk.qcow2 context/custom-embedded.iso
+	@echo "Creating libvirt VM with embedded container: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
+	ansible-playbook shanemcd.toolbox.virt_install -K \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=$(VM_MEMORY) \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/vm-disk.qcow2 \
+		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_iso_source=$(CURDIR)/context/custom-embedded.iso \
+		-e virt_install_iso_dest=$(LIBVIRT_IMAGES_DIR)/custom-embedded.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
+
+# Create libvirt VM from mkksiso ISO with interactive console.
+.PHONY: virt-install-console
+virt-install-console: vm-disk.qcow2 context/custom.iso
+	@echo "Creating libvirt VM with console: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh undefine $(VM_NAME_FULL) --nvram"
+	sudo cp -f $(CURDIR)/context/custom.iso $(LIBVIRT_IMAGES_DIR)/custom.iso
+	sudo cp -f $(CURDIR)/vm-disk.qcow2 $(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2
+	virt-install \
+		--connect qemu:///system \
+		--name $(VM_NAME_FULL) \
+		--memory $(VM_MEMORY) \
+		--vcpus $(VM_VCPUS) \
+		--disk path=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2,format=qcow2,bus=virtio,serial=f1ce90 \
+		--disk $(LIBVIRT_IMAGES_DIR)/custom.iso,device=cdrom,bus=sata \
+		--os-variant fedora-unknown \
+		$(VIRT_INSTALL_GRAPHICS) \
+		$(VIRT_INSTALL_VIDEO) \
+		$(VIRT_INSTALL_BOOT) \
+		$(VIRT_INSTALL_HOSTDEV)
+
+# Create libvirt VM from bootc-image-builder ISO (24GB RAM for container extraction).
 .PHONY: virt-install-bootc
 virt-install-bootc: vm-disk.qcow2 output/bootiso/install.iso
 	@echo "Creating libvirt VM with bootc ISO: $(VM_NAME_FULL)"
@@ -339,3 +385,18 @@ virt-install-bootc: vm-disk.qcow2 output/bootiso/install.iso
 		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
 		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
 		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
+
+# --- VM lifecycle -------------------------------------------------------------
+
+.PHONY: virt-destroy
+virt-destroy:
+	@echo "Destroying VM: $(VM_NAME_FULL)"
+	-virsh -c qemu:///system destroy $(VM_NAME_FULL)
+	-virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram
+	@echo "VM destroyed. Disk file preserved at: $(CURDIR)/vm-disk.qcow2"
+
+.PHONY: virt-start
+virt-start:
+	@echo "Starting VM: $(VM_NAME_FULL)"
+	virsh -c qemu:///system start $(VM_NAME_FULL)
+	virt-viewer -c qemu:///system $(VM_NAME_FULL) &
