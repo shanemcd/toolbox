@@ -121,6 +121,7 @@ RUN <<EORUN
         \
         `# Desktop applications` \
         chromium \
+        libva-nvidia-driver \
         thunderbird \
         qt6-qttools \
         Sunshine \
@@ -129,6 +130,7 @@ RUN <<EORUN
         krb5-devel \
         krb5-workstation \
         openldap-clients \
+        openldap-devel \
         \
         `# Document processing` \
         pandoc
