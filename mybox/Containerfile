@@ -66,6 +66,7 @@ RUN <<EORUN
         nvidia-container-toolkit \
         \
         `# Development tools` \
+        asciinema \
         cmake \
         emacs \
         fzf \
