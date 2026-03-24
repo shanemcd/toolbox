@@ -1,6 +1,6 @@
 ---
 - name: Restart Sunshine
   ansible.builtin.systemd_service:
-    name: sunshine
+    name: app-dev.lizardbyte.app.Sunshine
     scope: user
     state: restarted

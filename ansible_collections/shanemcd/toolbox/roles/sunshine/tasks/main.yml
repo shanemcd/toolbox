@@ -14,7 +14,7 @@
 
 - name: Enable and start Sunshine user service
   ansible.builtin.systemd_service:
-    name: sunshine
+    name: app-dev.lizardbyte.app.Sunshine
     scope: user
     enabled: true
     state: started
