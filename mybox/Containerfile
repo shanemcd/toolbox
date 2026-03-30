@@ -71,6 +71,7 @@ RUN <<EORUN
         emacs \
         fzf \
         gh \
+        glab \
         go-task \
         just \
         libtool \
