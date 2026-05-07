@@ -71,6 +71,7 @@ RUN <<EORUN
         emacs \
         fzf \
         gh \
+        gitleaks \
         glab \
         go-task \
         just \
