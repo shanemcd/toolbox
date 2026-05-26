@@ -422,6 +422,11 @@ tart-install: output/bootiso/install.iso
 tart-run:
 	tart run $(TART_VM_NAME)
 
+.PHONY: tart-run-headless
+tart-run-headless:
+	nohup tart run --no-graphics $(TART_VM_NAME) > /dev/null 2>&1 &
+	@echo "VM $(TART_VM_NAME) running headless. SSH: ssh shanemcd@\$$(tart ip $(TART_VM_NAME))"
+
 .PHONY: tart-destroy
 tart-destroy:
 	tart delete $(TART_VM_NAME)
