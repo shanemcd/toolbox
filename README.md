@@ -1,10 +1,16 @@
 # Shane's Toolbox Ansible Collection
 
-An Ansible collection for provisioning my personal development environment, including automated Fedora installations, desktop configuration, and application management.
+An Ansible collection for provisioning my personal development environment: automated Fedora installations, bootable container images, desktop configuration, and application management.
 
 ## Quick Start
 
-All playbooks can be run using `uvx --from ansible-core ansible-playbook`:
+Install collection dependencies (required once):
+
+```bash
+uvx --from ansible-core ansible-galaxy collection install -r requirements.yml
+```
+
+Run any playbook:
 
 ```bash
 uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
@@ -12,181 +18,134 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 
 ## Available Playbooks
 
-### System Provisioning
+### System Setup
 
-#### `make_fedora_iso`
-Generate a custom Fedora ISO with kickstart for unattended installations. Downloads the latest Fedora Everything netinst ISO, injects a kickstart configuration, and produces a bootable ISO that installs a Fedora Kinoite system using the bootc container image from `mybox/Containerfile`.
+| Playbook | Description | Flags |
+|---|---|---|
+| `inception` | Full environment setup: Oh My Zsh, dotfiles, flatpaks, fonts, Emacs, libvirt | `-K`, 1Password CLI |
+| `oh_my_zsh` | Install Oh My Zsh and set zsh as default shell | `-K` |
+| `dotfiles` | Initialize chezmoi, clone dotfiles, decrypt secrets, apply config | 1Password CLI |
+| `install_flatpaks` | Install flatpak applications from `roles/flatpaks/vars/main.yml` | |
+| `list_flatpaks` | List currently installed flatpaks | |
+| `fonts` | Download and install Iosevka SS05 font | |
+| `emacs` | Clone `.emacs.d`, compile vterm, install nerd-icons | |
+| `kde` | Configure KDE Plasma favorites via D-Bus | |
+| `libvirt` | Add current user to libvirt group | `-K` |
 
-**Using Docker (recommended - no sudo required):**
+### Image Generation
+
+| Playbook | Description | Flags |
+|---|---|---|
+| `fedora_iso` | Generate custom Fedora ISO with kickstart (mkksiso, network install) | |
+| `bootc_iso` | Generate ISO with embedded container via bootc-image-builder (offline install) | `-K` |
+| `bootc_qcow2` | Generate qcow2 disk image via bootc-image-builder | `-K` |
+
+### Remote / Specialized
+
+| Playbook | Description | Flags |
+|---|---|---|
+| `authorized_keys` | Populate SSH authorized_keys from GitHub public keys | inventory |
+| `tailscale_up` | Install Tailscale and join tailnet | inventory, auth key |
+| `jetkvm_tailscale` | Configure Tailscale on JetKVM devices | inventory, auth key |
+
+### Services
+
+| Playbook | Description | Flags |
+|---|---|---|
+| `nfs` | Configure NFS server for media sharing | `-K` |
+| `jellyfin` | Deploy Jellyfin as a rootless Podman quadlet | |
+| `sunshine` | Configure Sunshine game streaming and enable systemd service | |
+
+## Workflows
+
+### Tart VM on macOS
+
+Build a bootc ISO and run it in a Tart VM:
+
+```bash
+# Build the ISO (on macOS host)
+make bootc-iso BOOTC_USE_ALL_DISKS=yes
+
+# Create and install VM
+make tart-create
+make tart-install    # boots ISO, runs automated install
+make tart-run        # normal boot after install
+
+# SSH into the VM
+ssh shanemcd@$(tart ip fedora-mybox)
+
+# Inside the VM: set up the environment
+cd toolbox
+uvx --from ansible-core ansible-galaxy collection install -r requirements.yml
+uvx --from ansible-core ansible-playbook shanemcd.toolbox.inception -K
+```
+
+Override VM resources:
+
+```bash
+make tart-create TART_VM_NAME=mybox-test TART_DISK_SIZE=250 TART_MEMORY=16384 TART_CPU=8
+```
+
+### Bootable Container Image
+
+Build and push the mybox container image:
+
+```bash
+make mybox                          # Build Kinoite (KDE) image for current arch
+make mybox DESKTOP=silverblue       # Build Silverblue (GNOME) image
+make push-mybox                     # Push to quay.io
+make push-mybox-manifest            # Create multi-arch manifest
+make update-mybox                   # Build, push, manifest, bootc switch (all-in-one)
+```
+
+Multi-arch builds are also automated via GitHub Actions (`.github/workflows/build-images.yml`).
+
+### Fedora ISO Generation
+
+**Using Docker (no sudo required):**
+
 ```bash
 CONTAINER_RUNTIME=docker make context/custom.iso
 ```
 
 **Using Podman (requires sudo):**
+
 ```bash
 ANSIBLE_EXTRA_ARGS="-K" make context/custom.iso
 ```
 
-**Custom parameters:**
-```bash
-ansible-playbook shanemcd.toolbox.make_fedora_iso -v \
-  -e fedora_iso_build_context=/path/to/context \
-  -e fedora_iso_force=yes \
-  -e fedora_iso_kickstart_password=$PASSWORD \
-  -e fedora_iso_target_disk_id=nvme-Samsung_SSD_... \
-  -e container_runtime=docker
-```
-
-**Dependencies:**
-- Docker: `docker`, `ansible-core`, `community.docker` collection, Python `passlib`, `requests`, `docker`
-- Podman: `podman`, `ansible-core`, `containers.podman` collection, Python `passlib`
-
-**Testing the ISO:**
-```bash
-make qemu  # Boot ISO in QEMU, install, then reboot to test
-```
-
-**Note:** Podman requires sudo (`-K`) because `mkksiso` 38.4+ needs root privileges to create UEFI boot images. Rootless Podman cannot access the loop devices required for EFI boot image creation.
-
-#### `inception`
-Meta-playbook that runs a full environment setup: installs Oh My Zsh, configures dotfiles, installs flatpaks, fonts, and configures Emacs. Perfect for setting up a new machine.
+**With embedded container (offline install):**
 
 ```bash
-ansible-playbook shanemcd.toolbox.inception --ask-become-pass
+make context/custom-embedded.iso
 ```
 
-**Note:** Requires `--ask-become-pass` (or `-K`) for shell change, and 1Password CLI authenticated for dotfiles role.
-
-#### `oh_my_zsh`
-Install Oh My Zsh and set zsh as the default shell.
+### VM Testing
 
 ```bash
-ansible-playbook shanemcd.toolbox.oh_my_zsh --ask-become-pass
+# QEMU (direct, no libvirt)
+make qemu-mkksiso       # Boot mkksiso ISO
+make qemu-bootc-iso     # Boot bootc ISO (24GB RAM)
+make qemu-bootc-qcow2   # Boot qcow2 directly (fastest)
+
+# libvirt
+make virt-install        # Create VM from mkksiso ISO
+make virt-install-bootc  # Create VM from bootc ISO
+make virt-start          # Start existing VM
+make virt-destroy        # Remove VM
 ```
 
-**Note:** Requires `--ask-become-pass` (or `-K`) to change the default shell.
+## Collection Dependencies
 
-### Desktop Configuration
+| Collection | Used by | Purpose |
+|---|---|---|
+| `community.general` | flatpaks, dotfiles, virt_install | flatpak management, 1Password lookup, XML editing |
+| `community.docker` | fedora_iso | Docker image/container management |
+| `ansible.posix` | nfs, authorized_keys | firewalld rules, SSH authorized keys |
+| `containers.podman` | fedora_iso, bootc_image | Podman image/container management |
 
-#### `dotfiles`
-Initialize chezmoi and apply dotfiles configuration. Fetches the age encryption key from 1Password, clones the dotfiles repository, decrypts secrets, and applies the configuration.
+Install all dependencies: `uvx --from ansible-core ansible-galaxy collection install -r requirements.yml`
 
-```bash
-ansible-playbook shanemcd.toolbox.dotfiles
-```
+## See Also
 
-**Requirements:**
-- `chezmoi` installed on the target system
-- `community.general` Ansible collection
-- 1Password CLI (`op`) installed and authenticated
-- 1Password item named "Chezmoi Key" containing the age private key
-
-**What it does:**
-1. Creates `~/.config/chezmoi` directory with secure permissions
-2. Fetches age encryption key from 1Password (if not already present)
-3. Initializes chezmoi with the dotfiles repository
-4. Runs `setup-secrets.sh` to decrypt secrets
-5. Applies chezmoi configuration
-
-#### `kde`
-Configure KDE Plasma application menu favorites using the official D-Bus API. Favorites are defined in `roles/kde/vars/main.yml`.
-
-```bash
-ansible-playbook shanemcd.toolbox.kde
-```
-
-**How it works:** Uses `org.kde.ActivityManager.ResourcesLinking` D-Bus interface to add/remove favorites. This is the proper, supported method that works during active Plasma sessions and lets KDE handle all database synchronization.
-
-#### `flatpaks`
-Install flatpak applications defined in `roles/flatpaks/vars/main.yml`.
-
-```bash
-ansible-playbook shanemcd.toolbox.install_flatpaks
-
-# Install at system level instead of user level
-ansible-playbook shanemcd.toolbox.install_flatpaks -e flatpaks_method=system
-```
-
-List currently installed flatpaks:
-```bash
-ansible-playbook shanemcd.toolbox.list_flatpaks
-```
-
-#### `fonts`
-Download and install Iosevka SS05 font from the latest GitHub release.
-
-```bash
-ansible-playbook shanemcd.toolbox.fonts
-```
-
-#### `emacs`
-Clone `.emacs.d` repository and configure Emacs with packages, vterm compilation, and nerd-icons fonts.
-
-```bash
-ansible-playbook shanemcd.toolbox.emacs
-```
-
-**What it does:**
-1. Clones `https://github.com/shanemcd/.emacs.d`
-2. Runs Emacs in batch mode with `vterm-always-compile-module=t` to auto-compile vterm
-3. Loads init.el (which runs org-babel to load configuration)
-4. Installs nerd-icons fonts non-interactively
-
-### Remote/Specialized Systems
-
-#### `authorized_keys`
-Populate SSH authorized_keys from GitHub user public keys.
-
-```bash
-ansible-playbook shanemcd.toolbox.authorized_keys \
-  -i inventory.ini \
-  -e github_users=['shanemcd','otheruser'] \
-  -e remote_user=root
-```
-
-**Options:**
-- `github_users` - List of GitHub usernames to fetch keys from
-- `remote_user` - User account to configure (default: `root`)
-- `clear_existing` - Set to `true` to wipe existing authorized_keys first
-
-#### `jetkvm_tailscale`
-Install and configure Tailscale on JetKVM devices (Rockchip-based KVM over IP hardware).
-
-```bash
-ansible-playbook shanemcd.toolbox.jetkvm_tailscale \
-  -i jetkvm-inventory \
-  -e tailscale_auth_key=$TSKEY
-```
-
-**Requirements:**
-- Target must be a JetKVM device (detects Rockchip in `/proc/cpuinfo`)
-- Tailscale auth key from https://login.tailscale.com/admin/settings/keys
-
-**What it does:**
-1. Downloads latest Tailscale ARM release
-2. Installs tailscaled daemon with init script (`S22tailscale`)
-3. Configures persistent state in `/userdata/tailscale-state`
-4. Authenticates using provided auth key
-
-### Services
-
-#### `jellyfin`
-Deploy Jellyfin media server as a rootless Podman container managed by a user-scoped systemd quadlet.
-
-```bash
-ansible-playbook shanemcd.toolbox.jellyfin -v
-```
-
-**What it does:**
-1. Creates `~/media` directory (shared with the NFS role)
-2. Deploys a quadlet `.container` file to `~/.config/containers/systemd/`
-3. Enables `loginctl linger` so the service runs without an active login session
-4. Starts and enables the `jellyfin` systemd user service
-
-**Options:**
-- `jellyfin_image` - Container image (default: `docker.io/jellyfin/jellyfin:latest`)
-- `jellyfin_web_port` - HTTP port (default: `8096`)
-- `jellyfin_media_path` - Media library path (default: `~/media`)
-- `jellyfin_media_readonly` - Mount media read-only (default: `true`)
-- `jellyfin_auto_update` - Enable `podman auto-update` (default: `true`)
-- `jellyfin_enable_linger` - Enable loginctl linger (default: `true`)
+- [AGENTS.md](AGENTS.md) — architecture details, implementation notes, and all Makefile variables
