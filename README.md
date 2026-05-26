@@ -56,6 +56,43 @@ uvx --from ansible-core ansible-playbook shanemcd.toolbox.<playbook_name>
 | `jellyfin` | Deploy Jellyfin as a rootless Podman quadlet | |
 | `sunshine` | Configure Sunshine game streaming and enable systemd service | |
 
+## New Machine Setup
+
+### 1Password CLI
+
+The `dotfiles` and `inception` playbooks fetch the chezmoi age encryption key from 1Password. You need the 1Password CLI installed and authenticated first.
+
+**Install the CLI:**
+
+```bash
+# macOS
+brew install 1password-cli
+
+# Fedora (already included in mybox image)
+# The CLI is pre-installed as `op`
+```
+
+**Sign in to your account:**
+
+```bash
+# First time: add your account
+eval $(op account add --address my.1password.com --email you@example.com)
+
+# Subsequent sessions: sign in
+eval $(op signin)
+
+# Verify it works
+op whoami
+```
+
+**Verify the key is accessible:**
+
+```bash
+op document get "Chezmoi Key" > /dev/null && echo "OK"
+```
+
+Once `op whoami` succeeds, the `dotfiles` playbook will be able to fetch the chezmoi key automatically.
+
 ## Workflows
 
 ### Tart VM on macOS
@@ -74,9 +111,10 @@ make tart-run        # normal boot after install
 # SSH into the VM
 ssh shanemcd@$(tart ip fedora-mybox)
 
-# Inside the VM: set up the environment
-cd toolbox
+# Inside the VM: clone toolbox, install deps, sign into 1Password, then run inception
+git clone git@github.com:shanemcd/toolbox.git && cd toolbox
 uvx --from ansible-core ansible-galaxy collection install -r requirements.yml
+eval $(op signin)
 uvx --from ansible-core ansible-playbook shanemcd.toolbox.inception -K
 ```
 
