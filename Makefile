@@ -14,6 +14,12 @@ BOOTC_USE_ALL_DISKS ?= no
 BOOTC_FORCE ?= no
 LIBVIRT_IMAGES_DIR ?= /var/lib/libvirt/images
 
+# Tart VM settings
+TART_VM_NAME ?= fedora-mybox
+TART_DISK_SIZE ?= 100
+TART_MEMORY ?= 8192
+TART_CPU ?= 4
+
 # Desktop environment: "kinoite" (KDE) or "silverblue" (GNOME)
 DESKTOP ?= kinoite
 FEDORA_VERSION ?= 43
@@ -400,3 +406,22 @@ virt-start:
 	@echo "Starting VM: $(VM_NAME_FULL)"
 	virsh -c qemu:///system start $(VM_NAME_FULL)
 	virt-viewer -c qemu:///system $(VM_NAME_FULL) &
+
+# --- Tart VM (macOS, Apple Virtualization.framework) -------------------------
+
+.PHONY: tart-create
+tart-create:
+	tart create --linux $(TART_VM_NAME)
+	tart set $(TART_VM_NAME) --disk-size $(TART_DISK_SIZE) --memory $(TART_MEMORY) --cpu $(TART_CPU)
+
+.PHONY: tart-install
+tart-install: output/bootiso/install.iso
+	tart run --disk $(CURDIR)/output/bootiso/install.iso $(TART_VM_NAME)
+
+.PHONY: tart-run
+tart-run:
+	tart run $(TART_VM_NAME)
+
+.PHONY: tart-destroy
+tart-destroy:
+	tart delete $(TART_VM_NAME)

@@ -146,7 +146,7 @@
   ansible.builtin.file:
     path: "{{ bootc_image_output_path }}"
     owner: "{{ ansible_facts['user_id'] }}"
-    group: "{{ ansible_facts['user_id'] }}"
+    group: "{{ ansible_facts['user_gid'] }}"
   become: true
   when: final_output_stat.stat.exists
 

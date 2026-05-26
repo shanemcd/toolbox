@@ -299,6 +299,26 @@ make virt-install GPU_PASSTHROUGH=yes
 # VM will be named fedora-mybox-gpu
 ```
 
+#### Tart (macOS, Apple Virtualization.framework)
+
+Create and install a Fedora mybox VM on macOS using Tart:
+```bash
+make bootc-iso BOOTC_USE_ALL_DISKS=yes   # Build ISO (use all disks for single virtual disk)
+make tart-create                          # Create bare Linux VM (100GB disk, 8GB RAM, 4 CPUs)
+make tart-install                         # Boot from ISO to install
+make tart-run                             # Run normally after installation
+make tart-destroy                         # Delete the VM
+```
+
+With custom resources:
+```bash
+make tart-create TART_VM_NAME=mybox-test TART_DISK_SIZE=250 TART_MEMORY=16384 TART_CPU=8
+make tart-install TART_VM_NAME=mybox-test
+make tart-run TART_VM_NAME=mybox-test
+```
+
+Requires: `brew install cirruslabs/cli/tart`
+
 #### VM lifecycle
 
 ```bash
@@ -483,11 +503,17 @@ Makefile variables:
 - `FEDORA_VERSION` - Fedora version to use (default: 43)
 - `CONTAINER_RUNTIME` - Use "podman" (default) or "docker"
 
-### VM Configuration
+### VM Configuration (libvirt)
 - `VM_NAME` - Libvirt VM name (default: fedora-mybox, auto-suffixed with "-gpu" if GPU passthrough enabled)
 - `VM_MEMORY` - RAM in MB (default: 10000)
 - `VM_VCPUS` - CPU count (default: 4)
 - `GPU_PASSTHROUGH` - Enable NVIDIA GPU passthrough: "yes" or "no" (default: no)
+
+### VM Configuration (Tart, macOS)
+- `TART_VM_NAME` - Tart VM name (default: fedora-mybox)
+- `TART_DISK_SIZE` - Disk size in GB (default: 100)
+- `TART_MEMORY` - RAM in MB (default: 8192)
+- `TART_CPU` - CPU count (default: 4)
 
 ## Dependencies
 
