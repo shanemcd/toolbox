@@ -89,7 +89,7 @@
     name: "{{ bootc_image_image }}:{{ bootc_image_tag }}"
     state: present
     force: true
-  become: true
+  become: "{{ ansible_facts['os_family'] != 'Darwin' }}"
   when: not bootc_image_stat.stat.exists or bootc_image_force | bool
 
 - name: Build command arguments for bootc-image-builder
@@ -106,7 +106,7 @@
     state: directory
     prefix: bootc-image-builder-store-
   register: _bootc_image_store_dir
-  become: true
+  become: "{{ ansible_facts['os_family'] != 'Darwin' }}"
   when: not bootc_image_stat.stat.exists or bootc_image_force | bool
 
 - name: Run bootc-image-builder
@@ -119,22 +119,24 @@
     detach: false
     privileged: true
     pull: newer
-    security_opt:
-      - label=type:unconfined_t
-    volumes:
-      - "{{ bootc_image_config_path }}:/config.toml:ro"
-      - "{{ bootc_image_build_context }}:/output"
-      - /var/lib/containers/storage:/var/lib/containers/storage
-      - "{{ _bootc_image_store_dir.path }}:/store"
+    security_opt: "{{ omit if ansible_facts['os_family'] == 'Darwin' else ['label=type:unconfined_t'] }}"
+    env: "{{ {'OSBUILD_NO_RELABEL': '1'} if ansible_facts['os_family'] == 'Darwin' else omit }}"
+    volumes: >-
+      {{
+        [bootc_image_config_path ~ ':/config.toml:ro',
+         bootc_image_build_context ~ ':/output',
+         '/var/lib/containers/storage:/var/lib/containers/storage'] +
+        ([_bootc_image_store_dir.path ~ ':/store'] if ansible_facts['os_family'] != 'Darwin' else [])
+      }}
     command: "{{ _bootc_image_command }}"
-  become: true
+  become: "{{ ansible_facts['os_family'] != 'Darwin' }}"
   when: not bootc_image_stat.stat.exists or bootc_image_force | bool
 
 - name: Clean up osbuild store directory
   ansible.builtin.file:
     path: "{{ _bootc_image_store_dir.path }}"
     state: absent
-  become: true
+  become: "{{ ansible_facts['os_family'] != 'Darwin' }}"
   when: _bootc_image_store_dir.path is defined
 
 - name: Check if generated output exists
@@ -147,7 +149,7 @@
     path: "{{ bootc_image_output_path }}"
     owner: "{{ ansible_facts['user_id'] }}"
     group: "{{ ansible_facts['user_gid'] }}"
-  become: true
+  become: "{{ ansible_facts['os_family'] != 'Darwin' }}"
   when: final_output_stat.stat.exists
 
 - name: Display output location

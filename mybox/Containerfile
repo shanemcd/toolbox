@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:43
+ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:44
 FROM ${BASE_IMAGE}
 
 # =============================================================================
