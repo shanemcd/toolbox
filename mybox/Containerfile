@@ -31,7 +31,7 @@ RUN <<EORUN
 
     # Copr repositories
     dnf copr enable -y @ai-ml/nvidia-container-toolkit
-    dnf copr enable -y lizardbyte/beta
+    dnf copr enable -y lizardbyte/stable
     dnf copr enable -y claaj/typst
     dnf copr enable -y luminoso/k9s
 
