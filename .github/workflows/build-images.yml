@@ -5,9 +5,21 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      registry:
+        description: 'Container registry to push to'
+        required: true
+        default: 'ghcr.io'
+        type: choice
+        options:
+          - ghcr.io
+          - quay.io
   schedule:
     # Run nightly at 2:00 AM Eastern (7:00 AM UTC)
     - cron: '0 7 * * *'
+
+permissions:
+  packages: write
 
 jobs:
   build-images:
@@ -18,6 +30,8 @@ jobs:
         desktop: [kinoite, silverblue]
         arch: [x86_64, aarch64]
       fail-fast: false
+    env:
+      REGISTRY: ${{ inputs.registry || 'ghcr.io' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,19 +45,24 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           df -h
 
+      - name: Login to GHCR
+        if: env.REGISTRY == 'ghcr.io'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Login to Quay.io
+        if: env.REGISTRY == 'quay.io'
         run: |
           echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $2}' | docker login quay.io -u $(echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $1}') --password-stdin
 
       - name: Build image
-        run: make build-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker
+        run: make build-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
 
       - name: Show image info
         run: |
           docker images | grep mybox
 
       - name: Push image
-        run: make push-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker
+        run: make push-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
 
       - name: Save image size info
         run: |
@@ -51,4 +70,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Images pushed to Quay.io" >> $GITHUB_STEP_SUMMARY
+          echo "Images pushed to ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
