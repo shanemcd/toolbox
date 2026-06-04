@@ -213,22 +213,4 @@ EOF
     systemctl enable apcupsd
     systemctl enable shairport-sync
 
-    # Sunshine KMS capture: copy to writable location and set capability
-    # /usr is read-only (composefs), so copy to /usr/local/bin and setcap there
-    # User service override is managed via chezmoi dotfiles
-    cat > /usr/lib/systemd/system/sunshine-setcap.service <<'EOF'
-[Unit]
-Description=Setup Sunshine with CAP_SYS_ADMIN for KMS capture
-After=local-fs.target
-Before=multi-user.target
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash -c 'mkdir -p /usr/local/bin && cp /usr/bin/sunshine /usr/local/bin/sunshine && /usr/sbin/setcap cap_sys_admin+ep /usr/local/bin/sunshine'
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl enable sunshine-setcap.service
 EORUN
