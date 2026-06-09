@@ -1,16 +1,6 @@
 ---
-- name: Ensure Sunshine config directory exists
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/sunshine"
-    state: directory
-    mode: "0755"
-
-- name: Deploy Sunshine configuration
-  ansible.builtin.copy:
-    src: sunshine.conf
-    dest: "{{ ansible_facts['env']['HOME'] }}/.config/sunshine/sunshine.conf"
-    mode: "0644"
-  notify: Restart Sunshine
+# Configuration is managed by chezmoi dotfiles
+# This role only ensures the service is enabled and running
 
 - name: Enable and start Sunshine user service
   ansible.builtin.systemd_service:
