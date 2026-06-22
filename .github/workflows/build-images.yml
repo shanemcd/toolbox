@@ -9,7 +9,7 @@ on:
       registry:
         description: 'Container registry to push to'
         required: true
-        default: 'ghcr.io'
+        default: 'quay.io'
         type: choice
         options:
           - ghcr.io
