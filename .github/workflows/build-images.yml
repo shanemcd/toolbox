@@ -8,12 +8,11 @@ on:
     inputs:
       registry:
         description: 'Container registry to push to'
-        required: true
-        default: 'quay.io'
+        required: false
         type: choice
         options:
-          - ghcr.io
           - quay.io
+          - ghcr.io
   schedule:
     # Run nightly at 2:00 AM Eastern (7:00 AM UTC)
     - cron: '0 7 * * *'
@@ -31,7 +30,7 @@ jobs:
         arch: [x86_64, aarch64]
       fail-fast: false
     env:
-      REGISTRY: ${{ inputs.registry || 'ghcr.io' }}
+      REGISTRY: ${{ inputs.registry || 'quay.io' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
