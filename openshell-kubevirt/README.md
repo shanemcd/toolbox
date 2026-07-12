@@ -101,3 +101,6 @@ The Containerfile installs `jirahhh` into the Hermes venv and bakes
 `guest/jirahhh-config.yaml` (Red Hat URL + `openshell:resolve` for
 `JIRA_EMAIL` / `JIRA_API_TOKEN`). Create with `--provider atlassian` so the
 gateway can rewrite Basic auth. Policy allows `*.atlassian.net`.
+
+GitHub CLI (`gh` v2.96.0) is installed to `/usr/local/bin/gh` (allowed by
+`policy.yaml` github binaries). Use `--provider github` for token rewrite.

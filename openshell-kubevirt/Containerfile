@@ -16,7 +16,8 @@ COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
 # jirahhh into Hermes site-packages (same pattern as ddgs in the public base;
-# uv is not on the bootc image PATH).
+# uv is not on the bootc image PATH). GitHub CLI next to /usr/local (policy allows it).
+ARG GH_VERSION=2.96.0
 RUN set -euxo pipefail; \
     python3.13 -m pip install \
       --target=/opt/hermes/.venv/lib/python3.13/site-packages \
@@ -26,12 +27,28 @@ RUN set -euxo pipefail; \
       'from jirahhh.cli import main' \
       'raise SystemExit(main())' \
       > /opt/hermes/.venv/bin/jirahhh; \
-    chmod 755 /opt/hermes/.venv/bin/jirahhh
+    chmod 755 /opt/hermes/.venv/bin/jirahhh; \
+    curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+      | tar xz -C /usr/local --strip-components=1; \
+    command -v gh; \
+    gh --version
 
 COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
 
+# Never bake SIGNAL_ACCOUNT / allowlists into .env — Hermes load_dotenv(override=True)
+# would clobber create-time --env. Keep SIGNAL_HTTP_URL only; pass account/allowlist
+# via `openshell sandbox create --env`.
 RUN set -euxo pipefail; \
     chown root:root /sandbox/.hermes/SOUL.md && chmod 444 /sandbox/.hermes/SOUL.md; \
     chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md; \
     chown -R sandbox:sandbox /sandbox/.config/jirahhh && \
-    chmod 600 /sandbox/.config/jirahhh/config.yaml
+    chmod 600 /sandbox/.config/jirahhh/config.yaml; \
+    # COPY creates /sandbox/.config as root; Podman/XDG need it owned by sandbox.
+    chown sandbox:sandbox /sandbox/.config; \
+    if [ -f /sandbox/.hermes/.env ]; then \
+      grep -vE '^(SIGNAL_ACCOUNT|SIGNAL_ALLOWED_USERS|SIGNAL_HOME_CHANNEL|SLACK_ALLOWED_USERS)=' \
+        /sandbox/.hermes/.env > /tmp/hermes.env.stripped; \
+      mv /tmp/hermes.env.stripped /sandbox/.hermes/.env; \
+      chown sandbox:sandbox /sandbox/.hermes/.env; \
+      chmod 640 /sandbox/.hermes/.env; \
+    fi
