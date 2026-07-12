@@ -15,10 +15,18 @@ FROM ${BASE_IMAGE}
 COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
-# jirahhh into Hermes venv; config uses openshell:resolve for email/token.
+# jirahhh into Hermes site-packages (same pattern as ddgs in the public base;
+# uv is not on the bootc image PATH).
 RUN set -euxo pipefail; \
-    uv pip install --python /opt/hermes/.venv/bin/python3 \
-      "jirahhh @ git+https://github.com/shanemcd/jirahhh.git"
+    python3.13 -m pip install \
+      --target=/opt/hermes/.venv/lib/python3.13/site-packages \
+      "jirahhh @ git+https://github.com/shanemcd/jirahhh.git"; \
+    printf '%s\n' \
+      '#!/opt/hermes/.venv/bin/python3' \
+      'from jirahhh.cli import main' \
+      'raise SystemExit(main())' \
+      > /opt/hermes/.venv/bin/jirahhh; \
+    chmod 755 /opt/hermes/.venv/bin/jirahhh
 
 COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
 
