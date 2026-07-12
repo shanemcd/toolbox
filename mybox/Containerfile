@@ -208,9 +208,15 @@ EOF
     # Timezone
     ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 
+    # NVIDIA suspend/resume support
+    echo 'options nvidia NVreg_PreserveVideoMemoryAllocations=1' > /etc/modprobe.d/nvidia-power-management.conf
+
     # Enable services
     systemctl enable cockpit.socket
     systemctl enable apcupsd
     systemctl enable shairport-sync
+    systemctl enable nvidia-suspend.service
+    systemctl enable nvidia-resume.service
+    systemctl enable nvidia-hibernate.service
 
 EORUN
