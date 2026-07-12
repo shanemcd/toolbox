@@ -215,8 +215,12 @@ EOF
     systemctl enable cockpit.socket
     systemctl enable apcupsd
     systemctl enable shairport-sync
-    systemctl enable nvidia-suspend.service
-    systemctl enable nvidia-resume.service
-    systemctl enable nvidia-hibernate.service
+
+    # NVIDIA suspend/resume/hibernate services may not exist when akmod-nvidia
+    # is installed with --setopt=tsflags=noscripts (scriptlets that install
+    # these units are skipped).
+    systemctl enable nvidia-suspend.service || true
+    systemctl enable nvidia-resume.service || true
+    systemctl enable nvidia-hibernate.service || true
 
 EORUN
