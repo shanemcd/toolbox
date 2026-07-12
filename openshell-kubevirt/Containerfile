@@ -1,0 +1,36 @@
+# Downstream Hermes bootc image: site-specific layers on the public lean base.
+#
+# Public base (openshell-kubevirt nightly):
+#   ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
+#
+# This image is NOT a KubeVirt containerDisk. After building, convert with
+# bootc-image-builder and package via Containerfile.disk (see README).
+
+ARG BASE_IMAGE=ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
+FROM ${BASE_IMAGE}
+
+# Guest docs Hermes can read (SOUL points at OPENSHELL-POLICY.md).
+COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
+COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
+
+# Optional: append non-secret defaults from example. Do NOT bake
+# SIGNAL_ACCOUNT / SLACK_ALLOWED_USERS — pass those at create --env.
+COPY guest/hermes.env.example /tmp/hermes.env.example
+COPY guest/update-config-hashes.py /tmp/update-config-hashes.py
+
+RUN set -euxo pipefail; \
+    # Merge example keys that are missing (keep existing sealed values).
+    while IFS= read -r line || [ -n "$line" ]; do \
+      case "$line" in ''|\#*) continue ;; esac; \
+      key="${line%%=*}"; \
+      grep -qE "^${key}=" /sandbox/.hermes/.env 2>/dev/null && continue; \
+      printf '%s\n' "$line" >> /sandbox/.hermes/.env; \
+    done < /tmp/hermes.env.example; \
+    chmod u+w /sandbox/.hermes/SOUL.md /sandbox/.hermes/.env /sandbox/.hermes/.config-hash 2>/dev/null || true; \
+    python3 /tmp/update-config-hashes.py; \
+    chown root:root /sandbox/.hermes/SOUL.md && chmod 444 /sandbox/.hermes/SOUL.md; \
+    chown sandbox:sandbox /sandbox/.hermes/.env /sandbox/.hermes/.config-hash && \
+      chmod 640 /sandbox/.hermes/.env /sandbox/.hermes/.config-hash; \
+    cp /sandbox/.hermes/.config-hash /etc/nemoclaw/hermes.config-hash && \
+      chown root:root /etc/nemoclaw/hermes.config-hash && chmod 444 /etc/nemoclaw/hermes.config-hash; \
+    rm -f /tmp/hermes.env.example /tmp/update-config-hashes.py

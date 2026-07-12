@@ -1,0 +1,4 @@
+# Site secrets — copy from guest/hermes.env.example for local builds only
+guest/hermes.env
+disk/
+output/

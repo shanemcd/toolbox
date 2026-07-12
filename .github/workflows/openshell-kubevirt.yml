@@ -1,0 +1,100 @@
+name: Downstream Hermes images
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_image:
+        description: Public hermes-sandbox-bootc image
+        required: true
+        default: ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
+      push:
+        description: Push bootc + containerDisk to GHCR
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: openshell-kubevirt
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: inputs.push
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push layered bootc
+        env:
+          BASE: ${{ inputs.base_image }}
+          DO_PUSH: ${{ inputs.push }}
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y%m%d)
+          IMAGE="${REGISTRY}/hermes-sandbox-bootc"
+          EXTRA=(--load)
+          if [[ "$DO_PUSH" == "true" ]]; then
+            EXTRA=(--push)
+          fi
+          docker buildx build \
+            --platform=linux/amd64 \
+            --build-arg "BASE_IMAGE=${BASE}" \
+            -t "${IMAGE}:site" \
+            -t "${IMAGE}:site-${DATE}" \
+            "${EXTRA[@]}" \
+            -f Containerfile .
+
+      - name: Login rootful podman to GHCR
+        if: inputs.push
+        run: |
+          set -euo pipefail
+          echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+
+      - name: Build qcow2 with bootc-image-builder
+        if: inputs.push
+        id: bib
+        uses: osbuild/bootc-image-builder-action@v0.0.2
+        with:
+          config-file: openshell-kubevirt/bib-qcow2.toml
+          image: ${{ env.REGISTRY }}/hermes-sandbox-bootc:site
+          types: qcow2
+          rootfs: ext4
+          chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
+          additional-args: --use-librepo=True
+
+      - name: Package and push containerDisk
+        if: inputs.push
+        env:
+          QCOW2: ${{ steps.bib.outputs.qcow2-output-path }}
+        run: |
+          set -euo pipefail
+          test -f "$QCOW2"
+          DATE=$(date -u +%Y%m%d)
+          PKG=$(mktemp -d)
+          mkdir -p "$PKG/disk"
+          cp "$QCOW2" "$PKG/disk/fedora.qcow2"
+          cp Containerfile.disk "$PKG/Dockerfile"
+          IMAGE="${REGISTRY}/hermes-sandbox-kubevirt"
+          docker buildx build \
+            --platform=linux/amd64 \
+            --push \
+            -t "${IMAGE}:site" \
+            -t "${IMAGE}:site-${DATE}" \
+            "$PKG"

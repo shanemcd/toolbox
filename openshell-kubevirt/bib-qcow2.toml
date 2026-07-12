@@ -1,0 +1,2 @@
+# Minimal bootc-image-builder config for the downstream Hermes containerDisk.
+# Guest customizations live in Containerfile (layered on hermes-sandbox-bootc).

@@ -1,0 +1,229 @@
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    # Keep defaults from the gateway-built initial policy (cannot shrink live).
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /app
+    - /etc
+    - /var/log
+    # Hermes / NemoClaw on the bootc guest
+    - /opt/hermes
+    - /opt/nemoclaw-blueprint
+    - /usr/local
+    - /lib64
+    - /bin
+    - /sbin
+  read_write:
+    - /sandbox
+    - /tmp
+    - /dev/null
+    - /opt/data
+    - /dev/pts
+    - /run
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  # OpenShell inference proxy (Vertex). Hermes dials this host; gateway rewrites.
+  inference:
+    name: inference
+    endpoints:
+      - host: inference.local
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  # Auxiliary model / credit probe fallback
+  openrouter:
+    name: openrouter
+    endpoints:
+      - host: openrouter.ai
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  duckduckgo:
+    name: duckduckgo
+    endpoints:
+      - host: duckduckgo.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: "*.duckduckgo.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+
+  github:
+    name: github
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: codeload.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      # Release / raw / package CDNs (gh + other GitHub release installs)
+      - host: "*.githubusercontent.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      # Downloaders (Landlock: install into /sandbox/... — /usr/local is read-only)
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/curl
+      - path: /usr/bin/wget
+      # Post-install binary locations
+      - path: /sandbox/.hermes/bin/gh
+      - path: /sandbox/**/bin/gh
+      - path: /usr/local/bin/gh
+      - path: /usr/bin/gh
+
+  # uv installer
+  astral:
+    name: astral
+    endpoints:
+      - host: astral.sh
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: "*.astral.sh"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /usr/bin/curl
+      - path: /usr/bin/wget
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  pypi:
+    name: pypi
+    endpoints:
+      - host: pypi.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: files.pythonhosted.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/pip
+      - path: /usr/bin/pip3
+
+  # tirith / package ecosystem metadata
+  package_metadata:
+    name: package-metadata
+    endpoints:
+      - host: api.deps.dev
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: packages.ecosyste.ms
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /sandbox/.hermes/bin/tirith
+      - path: /sandbox/**/bin/tirith
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  slack:
+    name: slack
+    endpoints:
+      - host: "*.slack.com"
+        port: 443
+        protocol: websocket
+        enforcement: enforce
+        access: full
+        websocket_credential_rewrite: true
+      - host: slack.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: files.slack.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  signal:
+    name: signal
+    endpoints:
+      - host: signal-cli.default.svc.cluster.local
+        port: 8080
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/curl
+
+  # CRC / OpenShift API via in-cluster kubectl proxy.
+  # OpenShell SSRF blocks :6443, so Hermes cannot dial the apiserver directly.
+  kubernetes:
+    name: kubernetes
+    endpoints:
+      - host: hermes-kube-proxy.default.svc.cluster.local
+        port: 8080
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /sandbox/.hermes/bin/oc
+      - path: /sandbox/**/bin/oc
+      - path: /sandbox/.hermes/bin/kubectl
+      - path: /sandbox/.hermes/bin/virtctl
+      - path: /sandbox/bin/virtctl
+      - path: /sandbox/**/bin/virtctl
+      - path: /usr/bin/curl
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13

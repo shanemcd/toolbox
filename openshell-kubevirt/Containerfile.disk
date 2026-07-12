@@ -1,0 +1,4 @@
+# KubeVirt containerDisk wrapper. Built after bootc-image-builder produces
+# disk/fedora.qcow2 from the layered bootc image.
+FROM scratch
+COPY disk/fedora.qcow2 /disk/fedora.qcow2
