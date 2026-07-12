@@ -74,7 +74,8 @@ jobs:
         id: bib
         uses: osbuild/bootc-image-builder-action@v0.0.2
         with:
-          config-file: openshell-kubevirt/bib-qcow2.toml
+          # Absolute path required: relative paths with "/" are treated as podman volume names.
+          config-file: ${{ github.workspace }}/openshell-kubevirt/bib-qcow2.toml
           image: ${{ env.BOOTC_IMAGE }}:latest
           types: qcow2
           rootfs: ext4
