@@ -15,12 +15,14 @@ contains `/disk/*.qcow2`.
 ghcr.io/shanemcd/hermes-sandbox-bootc:nightly   # public lean OS (bootc)
         │  FROM + COPY guest overlays
         ▼
-…/hermes-sandbox-bootc:site                     # this Containerfile
+ghcr.io/shanemcd/hermes-site-bootc:latest       # this Containerfile (toolbox-owned)
         │  bootc-image-builder → qcow2
         │  Containerfile.disk (FROM scratch)
         ▼
-…/hermes-sandbox-kubevirt:site                  # what CRC / create --from uses
+ghcr.io/shanemcd/hermes-site-kubevirt:latest    # what CRC / create --from uses
 ```
+
+Package names are intentionally **not** `hermes-sandbox-*` — those GHCR packages are owned by `openshell-kubevirt` and this repo’s `GITHUB_TOKEN` cannot push to them.
 
 So after every meaningful guest change: **rebuild bootc layer → rebuild
 containerDisk**. Pointing `openshell sandbox create --from` at the bootc
@@ -35,7 +37,7 @@ disk (OpenShell hot-reloads policy).
 cd openshell-kubevirt
 podman build \
   --build-arg BASE_IMAGE=ghcr.io/shanemcd/hermes-sandbox-bootc:nightly \
-  -t localhost/hermes-sandbox-bootc:site \
+  -t localhost/hermes-site-bootc:latest \
   -f Containerfile .
 ```
 
@@ -56,12 +58,12 @@ sudo podman run --rm -it --privileged \
   quay.io/centos-bootc/bootc-image-builder:latest \
   --type qcow2 --rootfs ext4 --use-librepo=True \
   --config /config.toml \
-  localhost/hermes-sandbox-bootc:site
+  localhost/hermes-site-bootc:latest
 
 cp output/qcow2/disk.qcow2 disk/fedora.qcow2   # path may vary by bib version
 
 # 2) Wrap as containerDisk
-podman build -t localhost/hermes-sandbox-kubevirt:site -f Containerfile.disk .
+podman build -t localhost/hermes-site-kubevirt:latest -f Containerfile.disk .
 ```
 
 Then create / recreate Hermes with:
@@ -69,7 +71,7 @@ Then create / recreate Hermes with:
 ```bash
 openshell sandbox create \
   --name hermes \
-  --from localhost/hermes-sandbox-kubevirt:site \
+  --from localhost/hermes-site-kubevirt:latest \
   --policy ./policy.yaml \
   --provider vertex-prod --provider slack --provider github --provider atlassian \
   --env "SIGNAL_HTTP_URL=http://signal-cli.default.svc.cluster.local:8080" \

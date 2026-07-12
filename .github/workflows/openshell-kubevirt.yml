@@ -18,6 +18,9 @@ permissions:
 
 env:
   REGISTRY: ghcr.io/${{ github.repository_owner }}
+  # Distinct from openshell-kubevirt's hermes-sandbox-* packages (write ACL).
+  BOOTC_IMAGE: ghcr.io/${{ github.repository_owner }}/hermes-site-bootc
+  DISK_IMAGE: ghcr.io/${{ github.repository_owner }}/hermes-site-kubevirt
 
 jobs:
   build:
@@ -45,7 +48,6 @@ jobs:
         run: |
           set -euo pipefail
           DATE=$(date -u +%Y%m%d)
-          IMAGE="${REGISTRY}/hermes-sandbox-bootc"
           EXTRA=(--load)
           if [[ "$DO_PUSH" == "true" ]]; then
             EXTRA=(--push)
@@ -53,8 +55,8 @@ jobs:
           docker buildx build \
             --platform=linux/amd64 \
             --build-arg "BASE_IMAGE=${BASE}" \
-            -t "${IMAGE}:site" \
-            -t "${IMAGE}:site-${DATE}" \
+            -t "${BOOTC_IMAGE}:latest" \
+            -t "${BOOTC_IMAGE}:${DATE}" \
             "${EXTRA[@]}" \
             -f Containerfile .
 
@@ -73,7 +75,7 @@ jobs:
         uses: osbuild/bootc-image-builder-action@v0.0.2
         with:
           config-file: openshell-kubevirt/bib-qcow2.toml
-          image: ${{ env.REGISTRY }}/hermes-sandbox-bootc:site
+          image: ${{ env.BOOTC_IMAGE }}:latest
           types: qcow2
           rootfs: ext4
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
@@ -91,10 +93,9 @@ jobs:
           mkdir -p "$PKG/disk"
           cp "$QCOW2" "$PKG/disk/fedora.qcow2"
           cp Containerfile.disk "$PKG/Dockerfile"
-          IMAGE="${REGISTRY}/hermes-sandbox-kubevirt"
           docker buildx build \
             --platform=linux/amd64 \
             --push \
-            -t "${IMAGE}:site" \
-            -t "${IMAGE}:site-${DATE}" \
+            -t "${DISK_IMAGE}:latest" \
+            -t "${DISK_IMAGE}:${DATE}" \
             "$PKG"
