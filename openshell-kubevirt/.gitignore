@@ -1,4 +1,6 @@
 # Site secrets — copy from guest/hermes.env.example for local builds only
 guest/hermes.env
+# Optional local override with real tokens (never commit). The tracked
+# guest/jirahhh-config.yaml uses openshell:resolve placeholders only.
 disk/
 output/

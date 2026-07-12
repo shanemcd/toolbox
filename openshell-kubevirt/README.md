@@ -91,5 +91,13 @@ Do not commit real Signal/Slack allowlist values; keep them on `--env` only
 | `Containerfile` | Layer guest files onto public bootc |
 | `Containerfile.disk` | Scratch + `/disk/fedora.qcow2` |
 | `bib-qcow2.toml` | bootc-image-builder config |
-| `guest/` | Files copied into `/sandbox/.hermes/` |
+| `guest/` | Files copied into `/sandbox/.hermes/` (+ jirahhh config) |
+| `guest/jirahhh-config.yaml` | Baked to `/sandbox/.config/jirahhh/config.yaml` (placeholders) |
 | `policy.yaml` | OpenShell network/FS policy for `--policy` |
+
+## jirahhh / Atlassian
+
+The Containerfile installs `jirahhh` into the Hermes venv and bakes
+`guest/jirahhh-config.yaml` (Red Hat URL + `openshell:resolve` for
+`JIRA_EMAIL` / `JIRA_API_TOKEN`). Create with `--provider atlassian` so the
+gateway can rewrite Basic auth. Policy allows `*.atlassian.net`.

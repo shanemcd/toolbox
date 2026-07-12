@@ -207,6 +207,39 @@ network_policies:
       - path: /usr/bin/python3.13
       - path: /usr/bin/curl
 
+  # jirahhh / Atlassian REST (Basic auth rewritten by --provider atlassian)
+  atlassian_jira:
+    name: atlassian-jira
+    endpoints:
+      - host: "*.atlassian.net"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /opt/hermes/.venv/bin/jirahhh
+      - path: /sandbox/**/bin/jirahhh
+
+  atlassian_mcp:
+    name: atlassian-mcp
+    endpoints:
+      - host: mcp.atlassian.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: id.atlassian.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/curl
+
   # CRC / OpenShift API via in-cluster kubectl proxy.
   # OpenShell SSRF blocks :6443, so Hermes cannot dial the apiserver directly.
   kubernetes:

@@ -1,0 +1,11 @@
+prod:
+  url: https://your-org.atlassian.net
+  email: openshell:resolve:env:JIRA_EMAIL
+  token: openshell:resolve:env:JIRA_API_TOKEN
+  custom_fields:
+    acceptance_criteria: customfield_10718
+    epic_name: customfield_10011
+    parent_link: customfield_10018
+    epic_link: customfield_10014
+  security_levels:
+    default: "10049"

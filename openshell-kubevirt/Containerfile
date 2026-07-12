@@ -15,6 +15,15 @@ FROM ${BASE_IMAGE}
 COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
+# jirahhh into Hermes venv; config uses openshell:resolve for email/token.
+RUN set -euxo pipefail; \
+    uv pip install --python /opt/hermes/.venv/bin/python3 \
+      "jirahhh @ git+https://github.com/shanemcd/jirahhh.git"
+
+COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
+
 RUN set -euxo pipefail; \
     chown root:root /sandbox/.hermes/SOUL.md && chmod 444 /sandbox/.hermes/SOUL.md; \
-    chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md
+    chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md; \
+    chown -R sandbox:sandbox /sandbox/.config/jirahhh && \
+    chmod 600 /sandbox/.config/jirahhh/config.yaml
