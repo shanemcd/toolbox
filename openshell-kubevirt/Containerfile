@@ -5,9 +5,16 @@
 #
 # This image is NOT a KubeVirt containerDisk. After building, convert with
 # bootc-image-builder and package via Containerfile.disk (see README).
+#
+# Site CLIs (not in the public base): gh, glab, gws, jirahhh, oc/kubectl.
+# No rust/build toolchain.
 
 ARG BASE_IMAGE=ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
 FROM ${BASE_IMAGE}
+
+ARG GH_VERSION=2.96.0
+ARG GLAB_VERSION=1.107.0
+ARG GITLAB_HOST=gitlab.cee.redhat.com
 
 # Guest docs Hermes can read (SOUL points at OPENSHELL-POLICY.md).
 # NemoClaw seals hash config.yaml + .env only — SOUL/docs can be replaced
@@ -15,10 +22,9 @@ FROM ${BASE_IMAGE}
 COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
-# jirahhh into Hermes site-packages (same pattern as ddgs in the public base;
-# uv is not on the bootc image PATH). GitHub CLI next to /usr/local (policy allows it).
-ARG GH_VERSION=2.96.0
+# Node (for gws), jirahhh, gh, glab, oc/kubectl.
 RUN set -euxo pipefail; \
+    dnf install -y nodejs npm && \
     python3.13 -m pip install \
       --target=/opt/hermes/.venv/lib/python3.13/site-packages \
       "jirahhh @ git+https://github.com/shanemcd/jirahhh.git"; \
@@ -30,10 +36,22 @@ RUN set -euxo pipefail; \
     chmod 755 /opt/hermes/.venv/bin/jirahhh; \
     curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
       | tar xz -C /usr/local --strip-components=1; \
-    command -v gh; \
-    gh --version
+    curl -fsSL "https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/packages/generic/glab/${GLAB_VERSION}/glab_${GLAB_VERSION}_linux_amd64.tar.gz" \
+      | tar xz -C /usr/local/bin bin/glab --strip-components=1; \
+    curl -fsSL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux-amd64-rhel8.tar.gz" \
+      | tar xz -C /usr/local/bin oc kubectl; \
+    npm install -g @googleworkspace/cli; \
+    command -v gh glab oc kubectl gws; \
+    gh --version; \
+    glab --version; \
+    oc version --client; \
+    gws --version; \
+    dnf clean all
 
 COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
+COPY guest/gws-credentials.json /sandbox/.config/gws/credentials.json
+COPY guest/glab-config.yml /sandbox/.config/glab-cli/config.yml
+COPY guest/git-credential-openshell /usr/local/bin/git-credential-openshell
 
 # Never bake SIGNAL_ACCOUNT / allowlists into .env — Hermes load_dotenv(override=True)
 # would clobber create-time --env. Keep SIGNAL_HTTP_URL only; pass account/allowlist
@@ -43,8 +61,17 @@ RUN set -euxo pipefail; \
     chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md; \
     chown -R sandbox:sandbox /sandbox/.config/jirahhh && \
     chmod 600 /sandbox/.config/jirahhh/config.yaml; \
+    chown -R sandbox:sandbox /sandbox/.config/gws && \
+    chmod 600 /sandbox/.config/gws/credentials.json; \
+    chown -R sandbox:sandbox /sandbox/.config/glab-cli && \
+    chmod 600 /sandbox/.config/glab-cli/config.yml; \
+    chmod 755 /usr/local/bin/git-credential-openshell; \
     # COPY creates /sandbox/.config as root; Podman/XDG need it owned by sandbox.
     chown sandbox:sandbox /sandbox/.config; \
+    git config --system credential.https://github.com.helper 'openshell GITHUB_TOKEN'; \
+    if [ -n "${GITLAB_HOST}" ]; then \
+      git config --system "credential.https://${GITLAB_HOST}.helper" 'openshell GITLAB_TOKEN'; \
+    fi; \
     if [ -f /sandbox/.hermes/.env ]; then \
       grep -vE '^(SIGNAL_ACCOUNT|SIGNAL_ALLOWED_USERS|SIGNAL_HOME_CHANNEL|SLACK_ALLOWED_USERS)=' \
         /sandbox/.hermes/.env > /tmp/hermes.env.stripped; \

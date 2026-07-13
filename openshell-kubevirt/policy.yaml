@@ -111,6 +111,27 @@ network_policies:
       - path: /sandbox/**/bin/gh
       - path: /usr/local/bin/gh
       - path: /usr/bin/gh
+      - path: /usr/local/bin/git-credential-openshell
+
+  gitlab_redhat:
+    name: gitlab-redhat
+    endpoints:
+      - host: gitlab.cee.redhat.com
+        port: 22
+        enforcement: enforce
+        access: full
+      - host: gitlab.cee.redhat.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/git
+      - path: /usr/bin/ssh
+      - path: /usr/bin/curl
+      - path: /usr/local/bin/glab
+      - path: /usr/local/bin/git-credential-openshell
 
   # uv installer
   astral:
@@ -211,6 +232,44 @@ network_policies:
       - path: /usr/bin/python3.13
       - path: /usr/bin/curl
 
+  # Google Workspace CLI (token refresh POST body rewritten by --provider gws)
+  google_workspace:
+    name: google-workspace
+    endpoints:
+      - host: gmail.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: calendar-json.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: www.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+        request_body_credential_rewrite: true
+      - host: accounts.google.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /usr/bin/python3.13
+      - path: /usr/local/lib/node_modules/@googleworkspace/cli/bin/gws
+      - path: /usr/lib/node_modules/@googleworkspace/cli/bin/gws
+      - path: /usr/local/bin/gws
+      - path: /usr/bin/gws
+      - path: /usr/bin/curl
+
   # jirahhh / Atlassian REST (Basic auth rewritten by --provider atlassian)
   atlassian_jira:
     name: atlassian-jira
@@ -243,26 +302,3 @@ network_policies:
       - path: /opt/hermes/.venv/bin/python
       - path: /usr/bin/python3.13
       - path: /usr/bin/curl
-
-  # CRC / OpenShift API via in-cluster kubectl proxy.
-  # OpenShell SSRF blocks :6443, so Hermes cannot dial the apiserver directly.
-  kubernetes:
-    name: kubernetes
-    endpoints:
-      - host: hermes-kube-proxy.default.svc.cluster.local
-        port: 8080
-        protocol: rest
-        enforcement: enforce
-        access: full
-        allowed_ips:
-          - 10.217.4.0/23
-    binaries:
-      - path: /sandbox/.hermes/bin/oc
-      - path: /sandbox/**/bin/oc
-      - path: /sandbox/.hermes/bin/kubectl
-      - path: /sandbox/.hermes/bin/virtctl
-      - path: /sandbox/bin/virtctl
-      - path: /sandbox/**/bin/virtctl
-      - path: /usr/bin/curl
-      - path: /opt/hermes/.venv/bin/python
-      - path: /usr/bin/python3.13

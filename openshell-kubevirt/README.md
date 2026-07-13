@@ -87,7 +87,7 @@ openshell sandbox create \
   --name hermes \
   --from localhost/hermes-site-kubevirt:latest \
   --policy ./policy.yaml \
-  --provider vertex-prod --provider slack --provider github --provider atlassian \
+  --provider vertex-prod --provider slack --provider github --provider atlassian --provider gws --provider gitlab \
   --env "SIGNAL_HTTP_URL=http://signal-cli.default.svc.cluster.local:8080" \
   --env "SIGNAL_ACCOUNT=+1…" \
   --env "SIGNAL_ALLOWED_USERS=+1…" \
@@ -95,7 +95,7 @@ openshell sandbox create \
   -- /usr/local/bin/nemoclaw-start-vm
 
 # Always verify; attach any that are missing (Vertex inference can work without attach).
-for p in github slack vertex-prod atlassian; do
+for p in github slack vertex-prod atlassian gws gitlab; do
   openshell sandbox provider attach hermes "$p" 2>/dev/null || true
 done
 openshell sandbox provider list hermes
@@ -109,19 +109,55 @@ Skip `discord` (image disables that platform).
 
 | Path | Role |
 |------|------|
-| `Containerfile` | Layer guest files onto public bootc |
+| `Containerfile` | Site CLIs + guest files on public bootc (no rust toolchain) |
 | `Containerfile.disk` | Scratch + `/disk/fedora.qcow2` |
 | `bib-qcow2.toml` | bootc-image-builder config |
-| `guest/` | Files copied into `/sandbox/.hermes/` (+ jirahhh config) |
-| `guest/jirahhh-config.yaml` | Baked to `/sandbox/.config/jirahhh/config.yaml` (placeholders) |
+| `guest/` | SOUL/docs + placeholder configs for jirahhh / gws / glab / kube |
+| `guest/jirahhh-config.yaml` | → `/sandbox/.config/jirahhh/config.yaml` |
+| `guest/gws-credentials.json` | → `/sandbox/.config/gws/credentials.json` |
+| `guest/glab-config.yml` | → `/sandbox/.config/glab-cli/config.yml` |
+| `guest/git-credential-openshell` | → `/usr/local/bin/git-credential-openshell` |
 | `policy.yaml` | OpenShell network/FS policy for `--policy` |
+
+## Site CLIs (baked here, not in public bootc)
+
+| Tool | Install | Credentials |
+|------|---------|-------------|
+| `gh` | GitHub release → `/usr/local/bin` | `--provider github` |
+| `glab` | GitLab release → `/usr/local/bin` | `--provider gitlab` + `glab-config.yml` |
+| `gws` | `dnf install nodejs npm` + `npm i -g @googleworkspace/cli` | `--provider gws` + `gws-credentials.json` |
+| `jirahhh` | pip into Hermes venv | `--provider atlassian` |
+| `oc` / `kubectl` | OpenShift client tarball → `/usr/local/bin` | not wired (no kube proxy; `:6443` blocked by OpenShell SSRF) |
+
+Public `hermes-sandbox-bootc` stays lean (Hermes runtime + supervisor + podman). Node/npm and the CLIs above live only in this site image.
 
 ## jirahhh / Atlassian
 
-The Containerfile installs `jirahhh` into the Hermes venv and bakes
-`guest/jirahhh-config.yaml` (Red Hat URL + `openshell:resolve` for
-`JIRA_EMAIL` / `JIRA_API_TOKEN`). Create with `--provider atlassian` so the
-gateway can rewrite Basic auth. Policy allows `*.atlassian.net`.
+Bakes `guest/jirahhh-config.yaml` (Red Hat URL + `openshell:resolve` for
+`JIRA_EMAIL` / `JIRA_API_TOKEN`). Create with `--provider atlassian`.
 
-GitHub CLI (`gh` v2.96.0) is installed to `/usr/local/bin/gh` (allowed by
-`policy.yaml` github binaries). Use `--provider github` for token rewrite.
+## Google Workspace (`gws`)
+
+`guest/gws-credentials.json` uses `openshell:resolve:env:GWS_*`. Token refresh
+POSTs to `oauth2.googleapis.com` use `request_body_credential_rewrite`.
+
+```bash
+gws auth login --readonly -s gmail,calendar
+openshell provider create --name gws --type generic \
+  --credential "GWS_CLIENT_ID=..." \
+  --credential "GWS_CLIENT_SECRET=..." \
+  --credential "GWS_REFRESH_TOKEN=..."
+```
+
+## GitLab (`glab`)
+
+```bash
+openshell provider create --name gitlab --type generic \
+  --credential "GITLAB_TOKEN=..."
+```
+
+Override host at build time with `--build-arg GITLAB_HOST=...` and edit
+`guest/glab-config.yml` (see `.example`).
+
+Note: an existing `/sandbox` PVC keeps its tree; rootfs binaries update with
+the disk, but `.config/*` only seeds on first PVC init.

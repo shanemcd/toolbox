@@ -1,0 +1,6 @@
+hosts:
+  gitlab.internal.example:
+    token: openshell:resolve:env:GITLAB_TOKEN
+    api_host: gitlab.internal.example
+    api_protocol: https
+    git_protocol: https

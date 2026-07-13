@@ -69,7 +69,7 @@ How to read lines:
 | Log | Meaning |
 |-----|---------|
 | `DENIED … reason:endpoint X:port is not allowed by any policy` | Add a `network_policies` endpoint (and binary). |
-| `DENIED … engine:ssrf … port 6443` | Hard block — do **not** try to allow `:6443`. Use an in-cluster proxy on another port (see `kube-proxy/`). |
+| `DENIED … engine:ssrf … port 6443` | Hard block — OpenShell denies control-plane ports; do **not** try to allow `:6443`. |
 | `ALLOWED` then `NET:FAIL` | Policy permitted the dial; upstream/proxy still failed (TLS, rewrite, routing). |
 | `DENIED … failed to resolve peer binary` | Short-lived connect; retry or ensure the binary path is listed. |
 
@@ -137,7 +137,7 @@ network_policies:
 1. **Binary identity** — the path that appears in `DENIED` / `ALLOWED` logs must be listed under `binaries` (resolve symlinks; venv `python` → often `/usr/bin/python3.13`).
 2. **Landlock** — `/usr` and `/usr/local` are read-only. Install CLIs under `/sandbox/.hermes/bin` (or `/sandbox/bin`) and allow those paths.
 3. **GitHub releases** — allow `github.com`, `api.github.com`, and `*.githubusercontent.com` (CDN redirects). Requires the `github` provider attached for `openshell:resolve:` tokens.
-4. **Kube API** — never dial `:6443` from the sandbox. Use `http://hermes-kube-proxy.default.svc.cluster.local:8080` (`kubernetes` rule + `oc`/`virtctl` binaries). See [`kube-proxy/README.md`](../kube-proxy/README.md).
+4. **Kube API** — OpenShell SSRF blocks `:6443` from the sandbox. Do not dial the apiserver directly; there is no in-cluster kube proxy in this setup.
 5. **In-cluster HTTP services** — same pattern as Signal: `host: name.ns.svc.cluster.local`, `port: 8080`, `protocol: rest`.
 6. **Providers (always attach after create/recreate)** — links are per-sandbox and do not survive delete. Always attach `github`, `slack`, `vertex-prod`, and `atlassian` (not `discord`). Attach adds `_provider_*` policy overlays (`policy get --full`); placeholders only rewrite when attached and the header/body uses `openshell:resolve:env:KEY`. Vertex inference may still work via `GetInferenceBundle` without an attach — do not treat that as “providers are fine.”
    ```bash

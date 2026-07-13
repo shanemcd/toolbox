@@ -1,0 +1,6 @@
+hosts:
+  gitlab.cee.redhat.com:
+    token: openshell:resolve:env:GITLAB_TOKEN
+    api_host: gitlab.cee.redhat.com
+    api_protocol: https
+    git_protocol: https
