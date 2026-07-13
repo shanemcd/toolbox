@@ -5,6 +5,12 @@ Private layers on top of the public lean bootc image from
 Use this tree for site-specific guest config that should **not** go into the
 agent-sandbox / public Hermes contribution.
 
+**CI:** builds are centralized in the openshell-kubevirt
+[nightly rebuild](https://github.com/shanemcd/openshell-kubevirt/actions/workflows/nightly-rebuild.yml)
+(`build_site_hermes`, default on). This directory stays the source for
+`Containerfile` / `guest/`; do not rely on the old toolbox
+“Downstream Hermes images” workflow.
+
 ## Two images (yes, you need the containerDisk)
 
 KubeVirt does **not** boot a bootc OCI image directly. The Sandbox
@@ -22,11 +28,19 @@ ghcr.io/shanemcd/hermes-site-bootc:latest       # this Containerfile (toolbox-ow
 ghcr.io/shanemcd/hermes-site-kubevirt:latest    # what CRC / create --from uses
 ```
 
-Package names are intentionally **not** `hermes-sandbox-*` — those GHCR packages are owned by `openshell-kubevirt` and this repo’s `GITHUB_TOKEN` cannot push to them.
+Package names are intentionally **not** `hermes-sandbox-*` — those are the
+public lean images. Site packages are `hermes-site-bootc` /
+`hermes-site-kubevirt`.
+
+Nightly pushes site images from **openshell-kubevirt** Actions. If GHCR
+rejects the push, grant that repo **Write** under each package’s
+Manage Actions access (packages may still be linked to this toolbox repo
+from the first publish).
 
 So after every meaningful guest change: **rebuild bootc layer → rebuild
-containerDisk**. Pointing `openshell sandbox create --from` at the bootc
-image alone will not work.
+containerDisk** (or wait for / dispatch nightly with `build_site_hermes`).
+Pointing `openshell sandbox create --from` at the bootc image alone will
+not work.
 
 `policy.yaml` here is applied at create time (`--policy`), not baked into the
 disk (OpenShell hot-reloads policy).
