@@ -52,10 +52,14 @@ COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
 COPY guest/gws-credentials.json /sandbox/.config/gws/credentials.json
 COPY guest/glab-config.yml /sandbox/.config/glab-cli/config.yml
 COPY guest/git-credential-openshell /usr/local/bin/git-credential-openshell
+COPY guest/skip-config-integrity.conf /etc/systemd/system/sandbox-workload.service.d/skip-config-integrity.conf
+COPY guest/skip-config-integrity.conf /etc/systemd/system/openshell-sandbox.service.d/skip-config-integrity.conf
 
 # Never bake SIGNAL_ACCOUNT / allowlists into .env — Hermes load_dotenv(override=True)
 # would clobber create-time --env. Keep SIGNAL_HTTP_URL only; pass account/allowlist
 # via `openshell sandbox create --env`.
+# NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY is set on the systemd units above (process
+# env for nemoclaw-start); also record it in .env for visibility.
 RUN set -euxo pipefail; \
     chown root:root /sandbox/.hermes/SOUL.md && chmod 444 /sandbox/.hermes/SOUL.md; \
     chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md; \
@@ -73,8 +77,9 @@ RUN set -euxo pipefail; \
       git config --system "credential.https://${GITLAB_HOST}.helper" 'openshell GITLAB_TOKEN'; \
     fi; \
     if [ -f /sandbox/.hermes/.env ]; then \
-      grep -vE '^(SIGNAL_ACCOUNT|SIGNAL_ALLOWED_USERS|SIGNAL_HOME_CHANNEL|SLACK_ALLOWED_USERS)=' \
+      grep -vE '^(SIGNAL_ACCOUNT|SIGNAL_ALLOWED_USERS|SIGNAL_HOME_CHANNEL|SLACK_ALLOWED_USERS|NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY)=' \
         /sandbox/.hermes/.env > /tmp/hermes.env.stripped; \
+      printf '%s\n' 'NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY=1' >> /tmp/hermes.env.stripped; \
       mv /tmp/hermes.env.stripped /sandbox/.hermes/.env; \
       chown sandbox:sandbox /sandbox/.hermes/.env; \
       chmod 640 /sandbox/.hermes/.env; \

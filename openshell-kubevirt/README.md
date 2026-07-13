@@ -131,6 +131,11 @@ Skip `discord` (image disables that platform).
 
 Public `hermes-sandbox-bootc` stays lean (Hermes runtime + supervisor + podman). Node/npm and the CLIs above live only in this site image.
 
+`NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY=1` is baked on `openshell-sandbox` /
+`sandbox-workload` systemd drop-ins (and recorded in `.env`) so retained PVC
+config mutations from Hermes onboarding do not fail-close startup. Needs a
+NemoClaw `nemoclaw-start` that honors the env var.
+
 ## jirahhh / Atlassian
 
 Bakes `guest/jirahhh-config.yaml` (Red Hat URL + `openshell:resolve` for
