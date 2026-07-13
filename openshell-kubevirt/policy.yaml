@@ -202,6 +202,10 @@ network_policies:
         protocol: rest
         enforcement: enforce
         access: full
+        # ClusterIP is RFC1918; without allowed_ips the proxy L7-allows then
+        # SSRF-denies ("resolves to internal address"). CRC serviceNetwork.
+        allowed_ips:
+          - 10.217.4.0/23
     binaries:
       - path: /opt/hermes/.venv/bin/python
       - path: /usr/bin/python3.13
@@ -250,6 +254,8 @@ network_policies:
         protocol: rest
         enforcement: enforce
         access: full
+        allowed_ips:
+          - 10.217.4.0/23
     binaries:
       - path: /sandbox/.hermes/bin/oc
       - path: /sandbox/**/bin/oc

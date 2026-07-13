@@ -136,11 +136,16 @@ network_policies:
 
 1. **Binary identity** — the path that appears in `DENIED` / `ALLOWED` logs must be listed under `binaries` (resolve symlinks; venv `python` → often `/usr/bin/python3.13`).
 2. **Landlock** — `/usr` and `/usr/local` are read-only. Install CLIs under `/sandbox/.hermes/bin` (or `/sandbox/bin`) and allow those paths.
-3. **GitHub releases** — allow `github.com`, `api.github.com`, and `*.githubusercontent.com` (CDN redirects). Attach the `github` provider if using `openshell:resolve:` tokens.
+3. **GitHub releases** — allow `github.com`, `api.github.com`, and `*.githubusercontent.com` (CDN redirects). Requires the `github` provider attached for `openshell:resolve:` tokens.
 4. **Kube API** — never dial `:6443` from the sandbox. Use `http://hermes-kube-proxy.default.svc.cluster.local:8080` (`kubernetes` rule + `oc`/`virtctl` binaries). See [`kube-proxy/README.md`](../kube-proxy/README.md).
 5. **In-cluster HTTP services** — same pattern as Signal: `host: name.ns.svc.cluster.local`, `port: 8080`, `protocol: rest`.
-6. **Providers** — `openshell sandbox provider attach` adds `_provider_*` policy overlays; `--full` shows them. Placeholders only rewrite when the provider is attached and the header/body uses `openshell:resolve:env:KEY`.
-7. **Persist** — after a working live `policy update` / `set`, copy the same change into `hermes/policy.yaml` in git so the next recreate matches.
+6. **Providers (always attach after create/recreate)** — links are per-sandbox and do not survive delete. Always attach `github`, `slack`, `vertex-prod`, and `atlassian` (not `discord`). Attach adds `_provider_*` policy overlays (`policy get --full`); placeholders only rewrite when attached and the header/body uses `openshell:resolve:env:KEY`. Vertex inference may still work via `GetInferenceBundle` without an attach — do not treat that as “providers are fine.”
+   ```bash
+   for p in github slack vertex-prod atlassian; do
+     openshell sandbox provider attach hermes "$p"
+   done
+   ```
+7. **Persist** — after a working live `policy update` / `set`, copy the same change into `policy.yaml` in git so the next recreate matches.
 
 ## Workflow when you are blocked
 

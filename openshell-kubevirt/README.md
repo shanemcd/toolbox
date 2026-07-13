@@ -80,7 +80,7 @@ cp output/qcow2/disk.qcow2 disk/fedora.qcow2   # path may vary by bib version
 podman build -t localhost/hermes-site-kubevirt:latest -f Containerfile.disk .
 ```
 
-Then create / recreate Hermes with:
+Then create / recreate Hermes with **all providers** (links are wiped on delete; do not skip):
 
 ```bash
 openshell sandbox create \
@@ -93,10 +93,17 @@ openshell sandbox create \
   --env "SIGNAL_ALLOWED_USERS=+1…" \
   --env "SLACK_ALLOWED_USERS=U…" \
   -- /usr/local/bin/nemoclaw-start-vm
+
+# Always verify; attach any that are missing (Vertex inference can work without attach).
+for p in github slack vertex-prod atlassian; do
+  openshell sandbox provider attach hermes "$p" 2>/dev/null || true
+done
+openshell sandbox provider list hermes
 ```
 
 Do not commit real Signal/Slack allowlist values; keep them on `--env` only
 (Hermes `load_dotenv(override=True)` would otherwise fight baked placeholders).
+Skip `discord` (image disables that platform).
 
 ## Layout
 
