@@ -21,11 +21,12 @@ COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
 # Node (for gws), jirahhh, gh, glab, oc/kubectl.
-# hermes-minimal's venv python has no pip module — use system pip --target.
+# hermes-minimal's venv (and often system python3.13 on bootc) ship without
+# pip — ensurepip into the Hermes venv, then install jirahhh there.
 RUN set -euxo pipefail; \
-    dnf install -y nodejs npm python3-pip git && \
-    /usr/bin/python3.13 -m pip install \
-      --target=/opt/hermes/.venv/lib/python3.13/site-packages \
+    dnf install -y nodejs npm git && \
+    /opt/hermes/.venv/bin/python -m ensurepip --upgrade && \
+    /opt/hermes/.venv/bin/pip install --no-cache-dir \
       "jirahhh @ git+https://github.com/shanemcd/jirahhh.git"; \
     printf '%s\n' \
       '#!/opt/hermes/.venv/bin/python3' \
