@@ -1,7 +1,7 @@
-# Downstream Hermes bootc image: site-specific layers on the public lean base.
+# Downstream Hermes bootc image: site-specific layers on hermes-minimal.
 #
 # Public base (openshell-kubevirt nightly):
-#   ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
+#   ghcr.io/shanemcd/hermes-minimal-bootc:nightly
 #
 # This image is NOT a KubeVirt containerDisk. After building, convert with
 # bootc-image-builder and package via Containerfile.disk (see README).
@@ -9,7 +9,7 @@
 # Site CLIs (not in the public base): gh, glab, gws, jirahhh, oc/kubectl.
 # No rust/build toolchain.
 
-ARG BASE_IMAGE=ghcr.io/shanemcd/hermes-sandbox-bootc:nightly
+ARG BASE_IMAGE=ghcr.io/shanemcd/hermes-minimal-bootc:nightly
 FROM ${BASE_IMAGE}
 
 ARG GH_VERSION=2.96.0
@@ -17,8 +17,6 @@ ARG GLAB_VERSION=1.107.0
 ARG GITLAB_HOST=gitlab.cee.redhat.com
 
 # Guest docs Hermes can read (SOUL points at OPENSHELL-POLICY.md).
-# NemoClaw seals hash config.yaml + .env only — SOUL/docs can be replaced
-# without regenerating .config-hash.
 COPY guest/SOUL.md /sandbox/.hermes/SOUL.md
 COPY guest/OPENSHELL-POLICY.md /sandbox/.hermes/OPENSHELL-POLICY.md
 
@@ -52,17 +50,13 @@ COPY guest/jirahhh-config.yaml /sandbox/.config/jirahhh/config.yaml
 COPY guest/gws-credentials.json /sandbox/.config/gws/credentials.json
 COPY guest/glab-config.yml /sandbox/.config/glab-cli/config.yml
 COPY guest/git-credential-openshell /usr/local/bin/git-credential-openshell
-COPY guest/skip-config-integrity.conf /etc/systemd/system/sandbox-workload.service.d/skip-config-integrity.conf
-COPY guest/skip-config-integrity.conf /etc/systemd/system/openshell-sandbox.service.d/skip-config-integrity.conf
 
 # Never bake SIGNAL_ACCOUNT / allowlists into .env — Hermes load_dotenv(override=True)
 # would clobber create-time --env. Keep SIGNAL_HTTP_URL only; pass account/allowlist
 # via `openshell sandbox create --env`.
-# NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY is set on the systemd units above (process
-# env for nemoclaw-start); also record it in .env for visibility.
 RUN set -euxo pipefail; \
-    chown root:root /sandbox/.hermes/SOUL.md && chmod 444 /sandbox/.hermes/SOUL.md; \
-    chown sandbox:sandbox /sandbox/.hermes/OPENSHELL-POLICY.md && chmod 644 /sandbox/.hermes/OPENSHELL-POLICY.md; \
+    chown sandbox:sandbox /sandbox/.hermes/SOUL.md /sandbox/.hermes/OPENSHELL-POLICY.md && \
+    chmod 644 /sandbox/.hermes/SOUL.md /sandbox/.hermes/OPENSHELL-POLICY.md; \
     chown -R sandbox:sandbox /sandbox/.config/jirahhh && \
     chmod 600 /sandbox/.config/jirahhh/config.yaml; \
     chown -R sandbox:sandbox /sandbox/.config/gws && \
@@ -79,7 +73,6 @@ RUN set -euxo pipefail; \
     if [ -f /sandbox/.hermes/.env ]; then \
       grep -vE '^(SIGNAL_ACCOUNT|SIGNAL_ALLOWED_USERS|SIGNAL_HOME_CHANNEL|SLACK_ALLOWED_USERS|NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY)=' \
         /sandbox/.hermes/.env > /tmp/hermes.env.stripped; \
-      printf '%s\n' 'NEMOCLAW_SKIP_HERMES_CONFIG_INTEGRITY=1' >> /tmp/hermes.env.stripped; \
       mv /tmp/hermes.env.stripped /sandbox/.hermes/.env; \
       chown sandbox:sandbox /sandbox/.hermes/.env; \
       chmod 640 /sandbox/.hermes/.env; \

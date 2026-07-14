@@ -18,7 +18,7 @@ KubeVirt does **not** boot a bootc OCI image directly. The Sandbox
 contains `/disk/*.qcow2`.
 
 ```text
-ghcr.io/shanemcd/hermes-sandbox-bootc:nightly   # public lean OS (bootc)
+ghcr.io/shanemcd/hermes-minimal-bootc:nightly   # public lean OS (bootc, no NemoClaw)
         │  FROM + COPY guest overlays
         ▼
 ghcr.io/shanemcd/hermes-site-bootc:latest       # this Containerfile (toolbox-owned)
@@ -50,7 +50,7 @@ disk (OpenShell hot-reloads policy).
 ```bash
 cd openshell-kubevirt
 podman build \
-  --build-arg BASE_IMAGE=ghcr.io/shanemcd/hermes-sandbox-bootc:nightly \
+  --build-arg BASE_IMAGE=ghcr.io/shanemcd/hermes-minimal-bootc:nightly \
   -t localhost/hermes-site-bootc:latest \
   -f Containerfile .
 ```
