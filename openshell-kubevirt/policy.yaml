@@ -308,3 +308,65 @@ network_policies:
       - path: /opt/hermes/.venv/bin/python
       - path: /usr/bin/python3.13
       - path: /usr/bin/curl
+
+  # Debian apt (guest package installs)
+  debian_apt:
+    name: debian-apt
+    endpoints:
+      - host: deb.debian.org
+        port: 80
+        protocol: rest
+        enforcement: enforce
+        access: full
+      - host: deb.debian.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /usr/lib/apt/methods/http
+      - path: /usr/lib/apt/methods/https
+      - path: /usr/bin/apt
+      - path: /usr/bin/apt-get
+      - path: /usr/bin/pasta.avx2
+
+  # Kubernetes / container registry downloads
+  container_registries:
+    name: container-registries
+    endpoints:
+      - host: dl.k8s.io
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: registry.k8s.io
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "*.s3.dualstack.us-east-1.amazonaws.com"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: us-east4-docker.pkg.dev
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: quay.io
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: "*.quay.io"
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/bin/curl
+      - path: /usr/bin/podman
+      - path: /usr/bin/python3.13
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/pasta.avx2
