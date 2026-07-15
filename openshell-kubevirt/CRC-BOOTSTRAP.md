@@ -251,7 +251,11 @@ virtctl ssh root@vmi/hermes -n default -i ~/.ssh/id_rsa \
 
 ## Ongoing backups
 
-See [BACKUP.md](BACKUP.md) for creating backups. Quick one-shot:
+See [BACKUP.md](BACKUP.md) for creating backups. To enlarge the live
+`/sandbox` claim on CRC hostpath (no CSI expansion), see
+[GROW-WORKSPACE-PVC.md](GROW-WORKSPACE-PVC.md).
+
+Quick one-shot:
 
 ```bash
 oc apply -f - <<EOF

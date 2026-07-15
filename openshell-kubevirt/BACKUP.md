@@ -3,6 +3,10 @@
 Back up the Hermes VM workspace and cluster state to Google Cloud Storage
 using OADP (Velero + Kopia). Restore onto a completely fresh CRC cluster.
 
+To **grow** the live workspace on CRC hostpath (no CSI expansion), see
+[`GROW-WORKSPACE-PVC.md`](./GROW-WORKSPACE-PVC.md) — that is a local PVC clone
+cutover, not an OADP backup.
+
 ## What gets backed up
 
 | Data | Source | Notes |

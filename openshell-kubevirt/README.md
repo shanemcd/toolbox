@@ -5,6 +5,12 @@ Private layers on top of the public lean bootc image from
 Use this tree for site-specific guest config that should **not** go into the
 agent-sandbox / public Hermes contribution.
 
+**Ops runbooks in this tree:**
+
+- [`BACKUP.md`](./BACKUP.md) — OADP/GCS backup + restore of the Hermes PVC and namespaces
+- [`CRC-BOOTSTRAP.md`](./CRC-BOOTSTRAP.md) — stand up a fresh CRC Hermes stack
+- [`GROW-WORKSPACE-PVC.md`](./GROW-WORKSPACE-PVC.md) — clone/grow `/sandbox` on CRC hostpath (rsync `disk.img` → `qemu-img` → `resize2fs` → named PVC cutover)
+
 **CI:** builds are centralized in the openshell-kubevirt
 [nightly rebuild](https://github.com/shanemcd/openshell-kubevirt/actions/workflows/nightly-rebuild.yml)
 (`build_site_hermes`, default on). This directory stays the source for
@@ -112,6 +118,9 @@ Skip `discord` (image disables that platform).
 | `Containerfile` | Site CLIs + guest files on public bootc (no rust toolchain) |
 | `Containerfile.disk` | Scratch + `/disk/fedora.qcow2` |
 | `bib-qcow2.toml` | bootc-image-builder config |
+| `BACKUP.md` | OADP/GCS backup + restore |
+| `CRC-BOOTSTRAP.md` | Fresh CRC Hermes stack bootstrap |
+| `GROW-WORKSPACE-PVC.md` | Grow `/sandbox` via clone + named PVC passthrough |
 | `guest/` | SOUL/docs + placeholder configs for jirahhh / gws / glab / kube |
 | `guest/jirahhh-config.yaml` | → `/sandbox/.config/jirahhh/config.yaml` |
 | `guest/gws-credentials.json` | → `/sandbox/.config/gws/credentials.json` |

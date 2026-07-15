@@ -84,6 +84,12 @@ network_policies:
         protocol: rest
         enforcement: enforce
         access: full
+      - host: api.github.com
+        path: /graphql
+        port: 443
+        protocol: graphql
+        enforcement: enforce
+        access: full
       - host: github.com
         port: 443
         protocol: rest
