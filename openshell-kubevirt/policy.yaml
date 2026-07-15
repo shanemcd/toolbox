@@ -370,3 +370,66 @@ network_policies:
       - path: /usr/bin/python3.13
       - path: /opt/hermes/.venv/bin/python
       - path: /usr/bin/pasta.avx2
+
+  # Docker Hub
+  docker_hub:
+    name: docker-hub
+    endpoints:
+      - host: registry-1.docker.io
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/bin/podman
+      - path: /usr/bin/curl
+      - path: /usr/bin/pasta.avx2
+
+  # Go module proxy
+  golang:
+    name: golang
+    endpoints:
+      - host: proxy.golang.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+      - host: sigs.k8s.io
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /sandbox/.local/go/bin/go
+      - path: /sandbox/**/go/bin/go
+      - path: /usr/local/go/bin/go
+      - path: /usr/bin/go
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+
+  # Kind cluster simulated OpenShift OAuth
+  ocp_sim:
+    name: ocp-sim
+    endpoints:
+      - host: oauth-openshift.apps.ocp-sim.test
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: full
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
+      - path: /usr/bin/curl
+
+  # Open Source Vulnerabilities API
+  osv:
+    name: osv
+    endpoints:
+      - host: api.osv.dev
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /opt/hermes/.venv/bin/python
+      - path: /usr/bin/python3.13
