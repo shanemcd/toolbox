@@ -163,6 +163,7 @@ RUN <<EORUN
     mv /opt{,.bak}
     mkdir -p /opt/1Password
     tar -xzf /tmp/1password.tar.gz -C /opt/1Password --strip-components=1
+    sed -i 's/mkdir /mkdir -p /g' /opt/1Password/after-install.sh
     sh /opt/1Password/after-install.sh
     mv /opt/1Password /usr/lib/1Password
     ln -sf /usr/lib/1Password/1password /usr/bin/1password
