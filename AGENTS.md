@@ -291,6 +291,11 @@ Create libvirt VM from bootc-image-builder ISO (24GB RAM):
 make virt-install-bootc
 ```
 
+Create libvirt VM directly from bootc-image-builder qcow2 disk:
+```bash
+make virt-install-qcow2
+```
+
 Create VM with NVIDIA GPU passthrough (works with any virt-install target):
 ```bash
 make virt-install GPU_PASSTHROUGH=yes
@@ -476,7 +481,8 @@ The `mybox/Containerfile` is structured in layers:
 Ansible variables:
 - `bootc_image_output_type` - Output format: "anaconda-iso" (default) or "qcow2"
 - `bootc_image_image` - Container image to use (default: quay.io/shanemcd/mybox)
-- `bootc_image_tag` - Image tag (default: latest-kinoite-{arch})
+- `bootc_image_desktop` - Desktop variant: "kinoite" (default) or "silverblue"
+- `bootc_image_tag` - Image tag (default: latest-{desktop}-{arch})
 - `bootc_image_build_context` - Output directory (required)
 - `bootc_image_force` - Overwrite existing output (yes/no)
 - `bootc_image_user_password` - Plain text password (will be hashed)

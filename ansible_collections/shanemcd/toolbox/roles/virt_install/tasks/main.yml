@@ -4,9 +4,8 @@
     that:
       - virt_install_disk_source is defined
       - virt_install_disk_dest is defined
-      - virt_install_iso_source is defined
-      - virt_install_iso_dest is defined
       - virt_install_vm_name is defined
+      - virt_install_import | bool or (virt_install_iso_source is defined and virt_install_iso_dest is defined)
     fail_msg: "Missing required virt_install variables"
 
 - name: Check if VM already exists
@@ -35,11 +34,14 @@
   ansible.builtin.stat:
     path: "{{ virt_install_iso_source }}"
   register: iso_stat
+  when: not (virt_install_import | bool)
 
 - name: Fail if ISO source doesn't exist
   ansible.builtin.fail:
     msg: "ISO source {{ virt_install_iso_source }} does not exist"
-  when: not iso_stat.stat.exists
+  when:
+    - not (virt_install_import | bool)
+    - not iso_stat.stat.exists
 
 - name: Create destination directory
   ansible.builtin.file:
@@ -63,6 +65,7 @@
     mode: '0644'
     remote_src: true
   become: true
+  when: not (virt_install_import | bool)
 
 - name: Build hostdev arguments for GPU passthrough
   ansible.builtin.set_fact:
@@ -83,7 +86,11 @@
         --memory {{ virt_install_memory }} \
         --vcpus {{ virt_install_vcpus }} \
         --disk path={{ virt_install_disk_dest }},format=qcow2,bus=virtio,serial={{ virt_install_disk_serial }} \
+        {% if virt_install_import | bool %}
+        --import \
+        {% else %}
         --disk {{ virt_install_iso_dest }},device=cdrom,bus=sata \
+        {% endif %}
         --os-variant {{ virt_install_os_variant }} \
         --graphics {{ virt_install_graphics }} \
         --video {{ virt_install_video }} \

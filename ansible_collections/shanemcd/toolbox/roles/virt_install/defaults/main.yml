@@ -10,3 +10,4 @@ virt_install_video: "qxl"
 virt_install_boot: "uefi,hd,cdrom"
 virt_install_hostdev: ""
 virt_install_gpu_passthrough: false
+virt_install_import: false

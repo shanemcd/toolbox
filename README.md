@@ -169,6 +169,7 @@ make qemu-bootc-qcow2   # Boot qcow2 directly (fastest)
 # libvirt
 make virt-install        # Create VM from mkksiso ISO
 make virt-install-bootc  # Create VM from bootc ISO
+make virt-install-qcow2  # Create VM from bootc qcow2 directly
 make virt-start          # Start existing VM
 make virt-destroy        # Remove VM
 ```

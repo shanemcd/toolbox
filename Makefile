@@ -198,6 +198,7 @@ update-mybox-silverblue:
 context:
 	mkdir -p $@
 
+.PHONY: context/custom.iso
 context/custom.iso: context
 	ansible-playbook shanemcd.toolbox.fedora_iso -v \
 		-e fedora_iso_build_context=$(CURDIR)/context \
@@ -206,8 +207,10 @@ context/custom.iso: context
 		-e fedora_iso_target_disk_id=virtio-f1ce90 \
 		-e fedora_iso_kickstart_shutdown_command=poweroff \
 		-e container_runtime=$(CONTAINER_RUNTIME) \
+		-e fedora_iso_desktop=$(DESKTOP) \
 		$(ANSIBLE_EXTRA_ARGS)
 
+.PHONY: context/custom-embedded.iso
 context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 	ansible-playbook shanemcd.toolbox.fedora_iso -v -K \
 		-e fedora_iso_build_context=$(CURDIR)/context \
@@ -219,6 +222,7 @@ context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 		-e container_runtime=$(CONTAINER_RUNTIME) \
 		-e fedora_iso_embed_container=yes \
 		-e fedora_iso_container_archive=mybox-$(DESKTOP)-$(ARCH).tar \
+		-e fedora_iso_desktop=$(DESKTOP) \
 		$(ANSIBLE_EXTRA_ARGS)
 
 # --- bootc-image-builder (offline install, container embedded in image) -------
@@ -226,7 +230,7 @@ context/custom-embedded.iso: context context/mybox-$(DESKTOP)-$(ARCH).tar
 output:
 	mkdir -p $@
 
-.PHONY: bootc-iso
+.PHONY: bootc-iso output/bootiso/install.iso
 bootc-iso: output/bootiso/install.iso
 
 output/bootiso/install.iso: output
@@ -234,10 +238,11 @@ output/bootiso/install.iso: output
 		-e bootc_image_build_context=$(CURDIR)/output \
 		-e bootc_image_force=$(BOOTC_FORCE) \
 		-e bootc_image_user_password=fortestingonly \
+		-e bootc_image_desktop=$(DESKTOP) \
 		$(BOOTC_DISK_ARGS) \
 		$(ANSIBLE_EXTRA_ARGS)
 
-.PHONY: bootc-qcow2
+.PHONY: bootc-qcow2 output/qcow2/disk.qcow2
 bootc-qcow2: output/qcow2/disk.qcow2
 
 output/qcow2/disk.qcow2: output
@@ -245,6 +250,7 @@ output/qcow2/disk.qcow2: output
 		-e bootc_image_build_context=$(CURDIR)/output \
 		-e bootc_image_force=yes \
 		-e bootc_image_user_password=fortestingonly \
+		-e bootc_image_desktop=$(DESKTOP) \
 		$(ANSIBLE_EXTRA_ARGS)
 
 # ==============================================================================
@@ -385,6 +391,25 @@ virt-install-bootc: vm-disk.qcow2 output/bootiso/install.iso
 		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
 		-e virt_install_iso_source=$(CURDIR)/output/bootiso/install.iso \
 		-e virt_install_iso_dest=$(LIBVIRT_IMAGES_DIR)/bootc-install.iso \
+		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
+		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
+		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
+		-e virt_install_gpu_vga_addr="$(NVIDIA_VGA_ADDR)" \
+		-e virt_install_gpu_audio_addr="$(NVIDIA_AUDIO_ADDR)" \
+		-e virt_install_gpu_passthrough=$(GPU_PASSTHROUGH)
+
+# Create libvirt VM directly from bootc-image-builder qcow2 image.
+.PHONY: virt-install-qcow2
+virt-install-qcow2: output/qcow2/disk.qcow2
+	@echo "Creating libvirt VM from bootc qcow2: $(VM_NAME_FULL)"
+	@echo "If VM already exists, remove it first with: virsh -c qemu:///system undefine $(VM_NAME_FULL) --nvram"
+	ansible-playbook shanemcd.toolbox.virt_install -K \
+		-e virt_install_vm_name=$(VM_NAME_FULL) \
+		-e virt_install_memory=$(VM_MEMORY) \
+		-e virt_install_vcpus=$(VM_VCPUS) \
+		-e virt_install_disk_source=$(CURDIR)/output/qcow2/disk.qcow2 \
+		-e virt_install_disk_dest=$(LIBVIRT_IMAGES_DIR)/$(VM_NAME_FULL).qcow2 \
+		-e virt_install_import=yes \
 		-e virt_install_graphics="$(VIRT_INSTALL_GRAPHICS)" \
 		-e virt_install_video="$(VIRT_INSTALL_VIDEO)" \
 		-e virt_install_boot="$(VIRT_INSTALL_BOOT)" \
