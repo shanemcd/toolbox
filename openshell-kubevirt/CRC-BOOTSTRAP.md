@@ -78,7 +78,7 @@ oc wait hyperconverged kubevirt-hyperconverged -n openshift-cnv \
 
 ## Phase 3: Install the agent-sandbox controller + gateway
 
-From the [openshell-kubevirt](https://github.com/shanemcd/openshell-kubevirt) repo:
+From the [openshell-kubevirt](https://github.com/andyetanotherorg/openshell-kubevirt) repo:
 
 ```bash
 # Pin controller + gateway to latest nightly digests
@@ -300,8 +300,8 @@ EOF
 | GCP project | `shanemcd-rh` |
 | GCS bucket | `gs://shanemcd-rh-oadp-backups` (us-central1) |
 | GCP service account | `velero@shanemcd-rh.iam.gserviceaccount.com` |
-| Controller image | `ghcr.io/shanemcd/agent-sandbox-controller:nightly` |
-| Gateway image | `ghcr.io/shanemcd/openshell-gateway:nightly` |
-| Hermes containerDisk | `ghcr.io/shanemcd/hermes-site-kubevirt:nightly` |
-| agent-sandbox fork | `github.com/shanemcd/agent-sandbox` branch `kubevirt-backend` |
-| OpenShell fork | `github.com/shanemcd/OpenShell` branch `vm-runtime-backend` |
+| Controller image | `ghcr.io/andyetanotherorg/agent-sandbox-controller:nightly` |
+| Gateway image | `ghcr.io/andyetanotherorg/openshell-gateway:nightly` |
+| Hermes containerDisk | `ghcr.io/andyetanotherorg/hermes-site-kubevirt:nightly` |
+| agent-sandbox fork | `github.com/andyetanotherorg/agent-sandbox` branch `kubevirt-backend` |
+| OpenShell fork | `github.com/andyetanotherorg/OpenShell` branch `vm-runtime-backend` |

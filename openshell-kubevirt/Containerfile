@@ -1,7 +1,7 @@
 # Downstream Hermes bootc image: site-specific layers on hermes-minimal.
 #
 # Public base (openshell-kubevirt nightly):
-#   ghcr.io/shanemcd/hermes-minimal-bootc:nightly
+#   ghcr.io/andyetanotherorg/hermes-minimal-bootc:nightly
 #
 # This image is NOT a KubeVirt containerDisk. After building, convert with
 # bootc-image-builder and package via Containerfile.disk (see README).
@@ -9,7 +9,7 @@
 # Site CLIs (not in the public base): gh, glab, gws, jirahhh, oc/kubectl.
 # No rust/build toolchain.
 
-ARG BASE_IMAGE=ghcr.io/shanemcd/hermes-minimal-bootc:nightly
+ARG BASE_IMAGE=ghcr.io/andyetanotherorg/hermes-minimal-bootc:nightly
 FROM ${BASE_IMAGE}
 
 ARG GH_VERSION=2.96.0

@@ -12,7 +12,7 @@ This runbook is how we grew live Hermes from the original VCT claim
 
 Related: cluster disaster backup is [`BACKUP.md`](./BACKUP.md) (OADP/GCS).
 Product-side notes also live in
-[`openshell-kubevirt` REDEPLOY §2c](https://github.com/shanemcd/openshell-kubevirt/blob/main/REDEPLOY.md).
+[`openshell-kubevirt` REDEPLOY §2c](https://github.com/andyetanotherorg/openshell-kubevirt/blob/main/REDEPLOY.md).
 
 ## Prerequisites
 
