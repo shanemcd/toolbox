@@ -1,7 +1,7 @@
 # Downstream Hermes (OpenShell / KubeVirt)
 
 Private layers on top of the public lean bootc image from
-[`shanemcd/openshell-kubevirt`](https://github.com/shanemcd/openshell-kubevirt).
+[`andyetanotherorg/openshell-kubevirt`](https://github.com/andyetanotherorg/openshell-kubevirt).
 Use this tree for site-specific guest config that should **not** go into the
 agent-sandbox / public Hermes contribution.
 
@@ -12,7 +12,7 @@ agent-sandbox / public Hermes contribution.
 - [`GROW-WORKSPACE-PVC.md`](./GROW-WORKSPACE-PVC.md) — clone/grow `/sandbox` on CRC hostpath (rsync `disk.img` → `qemu-img` → `resize2fs` → named PVC cutover)
 
 **CI:** builds are centralized in the openshell-kubevirt
-[nightly rebuild](https://github.com/shanemcd/openshell-kubevirt/actions/workflows/nightly-rebuild.yml)
+[nightly rebuild](https://github.com/andyetanotherorg/openshell-kubevirt/actions/workflows/nightly-rebuild.yml)
 (`build_site_hermes`, default on). This directory stays the source for
 `Containerfile` / `guest/`; do not rely on the old toolbox
 “Downstream Hermes images” workflow.
@@ -24,24 +24,23 @@ KubeVirt does **not** boot a bootc OCI image directly. The Sandbox
 contains `/disk/*.qcow2`.
 
 ```text
-ghcr.io/shanemcd/hermes-minimal-bootc:nightly   # public lean OS (bootc, no NemoClaw)
+ghcr.io/andyetanotherorg/hermes-minimal-bootc:nightly   # public lean OS (bootc, no NemoClaw)
         │  FROM + COPY guest overlays
         ▼
-ghcr.io/shanemcd/hermes-site-bootc:latest       # this Containerfile (toolbox-owned)
+ghcr.io/andyetanotherorg/hermes-site-bootc:latest       # this Containerfile (toolbox-owned)
         │  bootc-image-builder → qcow2
         │  Containerfile.disk (FROM scratch)
         ▼
-ghcr.io/shanemcd/hermes-site-kubevirt:latest    # what CRC / create --from uses
+ghcr.io/andyetanotherorg/hermes-site-kubevirt:latest    # what CRC / create --from uses
 ```
 
 Package names are intentionally **not** `hermes-sandbox-*` — those are the
 public lean images. Site packages are `hermes-site-bootc` /
 `hermes-site-kubevirt`.
 
-Nightly pushes site images from **openshell-kubevirt** Actions. If GHCR
-rejects the push, grant that repo **Write** under each package’s
-Manage Actions access (packages may still be linked to this toolbox repo
-from the first publish).
+Nightly pushes site images from **andyetanotherorg/openshell-kubevirt**
+Actions to `ghcr.io/andyetanotherorg`. If GHCR rejects the push, grant that
+repo **Write** under each package’s Manage Actions access.
 
 So after every meaningful guest change: **rebuild bootc layer → rebuild
 containerDisk** (or wait for / dispatch nightly with `build_site_hermes`).
@@ -56,7 +55,7 @@ disk (OpenShell hot-reloads policy).
 ```bash
 cd openshell-kubevirt
 podman build \
-  --build-arg BASE_IMAGE=ghcr.io/shanemcd/hermes-minimal-bootc:nightly \
+  --build-arg BASE_IMAGE=ghcr.io/andyetanotherorg/hermes-minimal-bootc:nightly \
   -t localhost/hermes-site-bootc:latest \
   -f Containerfile .
 ```

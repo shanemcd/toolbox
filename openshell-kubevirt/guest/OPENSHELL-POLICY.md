@@ -2,7 +2,7 @@
 
 You run inside an OpenShell sandbox. Outbound network and which binaries may dial which hosts are enforced by **sandbox policy**. Credentials may be rewritten at the proxy; missing policy shows up as `DENIED` / `NET:FAIL` in supervisor logs, not as a normal HTTP 403 from the site.
 
-Canonical YAML for this CRC Hermes image: repo `shanemcd/openshell-kubevirt` → [`hermes/policy.yaml`](./policy.yaml).
+Canonical YAML for this CRC Hermes image: [`../policy.yaml`](../policy.yaml) in this toolbox tree (site nightly publishes from [`andyetanotherorg/openshell-kubevirt`](https://github.com/andyetanotherorg/openshell-kubevirt)).
 
 ## Who can change policy
 
