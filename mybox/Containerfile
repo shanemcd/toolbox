@@ -120,6 +120,7 @@ RUN <<EORUN
         nfs-utils \
         shairport-sync \
         tailscale \
+        mosh \
         tmux \
         \
         `# Desktop applications` \
