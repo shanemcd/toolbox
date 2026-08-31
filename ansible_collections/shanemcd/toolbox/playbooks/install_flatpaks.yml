@@ -2,7 +2,7 @@
 - name: Install flatpak applications
   hosts: localhost
   connection: local
-  gather_facts: false
+  gather_facts: true
 
   roles:
     - shanemcd.toolbox.flatpaks

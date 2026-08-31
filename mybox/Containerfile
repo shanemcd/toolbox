@@ -116,19 +116,20 @@ RUN <<EORUN
         cockpit-storaged \
         erofs-utils \
         etckeeper \
+        mosh \
         nc \
         nfs-utils \
+        pass \
         shairport-sync \
         tailscale \
-        mosh \
         tmux \
         \
         `# Desktop applications` \
         chromium \
         libva-nvidia-driver \
-        thunderbird \
         qt6-qttools \
         Sunshine \
+        thunderbird \
         \
         `# Kerberos / LDAP` \
         krb5-devel \
