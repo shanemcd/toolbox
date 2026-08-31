@@ -70,6 +70,7 @@ RUN <<EORUN
         cmake \
         emacs \
         fzf \
+        gcc-c++ \
         gh \
         gitleaks \
         glab \
