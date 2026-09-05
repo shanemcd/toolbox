@@ -53,8 +53,17 @@ RUN <<EORUN
         kernel-devel-$KERNEL_UNAME \
         kernel-devel-matched-$KERNEL_UNAME
 
-    # NVIDIA driver (skip scriptlets - they fail as root, we run akmods manually)
-    dnf install -y --setopt=tsflags=noscripts akmod-nvidia
+    # NVIDIA driver, 580 legacy branch (skip scriptlets - they fail as root, we
+    # run akmods manually). Mainline 590+/610 has a UMA regression on GB10
+    # (DGX Spark): file page cache is counted against cudaMemGetInfo (starves
+    # the vLLM KV cache by ~13 GiB) and UMA memory is not released after CUDA
+    # process exit. The 580xx branch is confirmed clean of both.
+    # See: forums.developer.nvidia.com/t/359969 and /t/363178
+    dnf install -y --setopt=tsflags=noscripts \
+        akmod-nvidia-580xx \
+        xorg-x11-drv-nvidia-580xx \
+        xorg-x11-drv-nvidia-580xx-cuda \
+        xorg-x11-drv-nvidia-580xx-power
 
     # Build NVIDIA kernel module
     akmods --force --kernels $KERNEL_UNAME
