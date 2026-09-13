@@ -44,29 +44,57 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           df -h
 
+      - name: Install podman with heredoc support
+        # The stock Ubuntu podman (4.9.3) mishandles Containerfile heredocs: it
+        # treats the heredoc body as build instructions. Install a recent static
+        # podman (v5.6.2) so mybox/Containerfile's `RUN <<EORUN` blocks parse.
+        # Podman is also used instead of docker because the Kinoite base image
+        # (~257 layers) exceeds docker's overlay2 max depth of 128.
+        run: |
+          sudo bash .github/utils/install-podman.sh
+          # Rootless podman needs a subuid/subgid range for the current user.
+          user="$(id -un)"
+          grep -q "^${user}:" /etc/subuid || echo "${user}:100000:65536" | sudo tee -a /etc/subuid
+          grep -q "^${user}:" /etc/subgid || echo "${user}:100000:65536" | sudo tee -a /etc/subgid
+          # The static bundle installs to /usr/local/bin; make sure it wins over
+          # the distro podman in /usr/bin for the remaining steps.
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
+
       - name: Login to GHCR
         if: env.REGISTRY == 'ghcr.io'
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            podman login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Login to Quay.io
         if: env.REGISTRY == 'quay.io'
         run: |
-          echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $2}' | docker login quay.io -u $(echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $1}') --password-stdin
+          echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $2}' | \
+            podman login quay.io \
+              -u $(echo "${{ secrets.QUAY_AUTH }}" | base64 -d | awk -F: '{print $1}') --password-stdin
 
       - name: Build image
-        run: make build-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
+        run: |
+          make build-mybox \
+            DESKTOP=${{ matrix.desktop }} \
+            CONTAINER_RUNTIME=podman \
+            MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
 
       - name: Show image info
         run: |
-          docker images | grep mybox
+          podman images | grep mybox
 
       - name: Push image
-        run: make push-mybox DESKTOP=${{ matrix.desktop }} CONTAINER_RUNTIME=docker MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
+        run: |
+          make push-mybox \
+            DESKTOP=${{ matrix.desktop }} \
+            CONTAINER_RUNTIME=podman \
+            MYBOX_IMAGE=${{ env.REGISTRY }}/shanemcd/mybox
 
       - name: Save image size info
         run: |
           echo "## Build Summary - ${{ matrix.desktop }} (${{ matrix.arch }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
+          podman images --format "{{.Repository}}:{{.Tag}} {{.Size}} {{.CreatedAt}}" | grep mybox >> $GITHUB_STEP_SUMMARY || true
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Images pushed to ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
