@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:44
+ARG BASE_IMAGE=quay.io/fedora-ostree-desktops/kinoite:44
 FROM ${BASE_IMAGE}
 
 # =============================================================================
@@ -184,10 +184,21 @@ RUN <<EORUN
     sh /opt/1Password/after-install.sh
     mv /opt/1Password /usr/lib/1Password
     ln -sf /usr/lib/1Password/1password /usr/bin/1password
+    ln -sf /usr/lib/1Password/1password-mcp /usr/bin/1password-mcp
     ln -sf /usr/lib/1Password/1Password-BrowserSupport /usr/bin/1Password-BrowserSupport
     ln -sf /usr/lib/1Password/1Password-Crash-Handler /usr/bin/1Password-Crash-Handler
     chmod 4755 /usr/lib/1Password/chrome-sandbox
-    sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' /usr/share/applications/1password.desktop
+    # 1Password 8.12.x renamed the desktop entry from 1password.desktop to the
+    # fully-qualified com.onepassword.OnePassword.desktop. Handle either name so
+    # the Exec path points at /usr/bin after we relocate /opt/1Password to
+    # /usr/lib/1Password.
+    for desktop_file in \
+        /usr/share/applications/1password.desktop \
+        /usr/share/applications/com.onepassword.OnePassword.desktop; do
+        if [ -f "$desktop_file" ]; then
+            sed -i 's|^Exec=/opt/1Password|Exec=/usr/bin|g' "$desktop_file"
+        fi
+    done
     rm -rf /opt
     mv /opt{.bak,}
 

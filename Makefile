@@ -23,7 +23,7 @@ TART_CPU ?= 4
 # Desktop environment: "kinoite" (KDE) or "silverblue" (GNOME)
 DESKTOP ?= kinoite
 FEDORA_VERSION ?= 44
-BASE_IMAGE_KINOITE := quay.io/fedora/fedora-kinoite:$(FEDORA_VERSION)
+BASE_IMAGE_KINOITE := quay.io/fedora-ostree-desktops/kinoite:$(FEDORA_VERSION)
 BASE_IMAGE_SILVERBLUE := quay.io/fedora/fedora-silverblue:$(FEDORA_VERSION)
 
 ifeq ($(DESKTOP),silverblue)
