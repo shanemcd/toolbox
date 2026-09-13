@@ -52,6 +52,15 @@ jobs:
         # (~257 layers) exceeds docker's overlay2 max depth of 128.
         run: |
           sudo bash .github/utils/install-podman.sh
+          # Ubuntu 24.04 restricts unprivileged user namespaces via AppArmor,
+          # which makes rootless podman fail with "failed to reexec: Permission
+          # denied". Relax the restriction; also extend the distro profile
+          # (which covers /usr/bin/podman) to the static /usr/local/bin/podman.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          if [ -f /etc/apparmor.d/podman ]; then
+            sudo sed -Ei 's!^profile podman /usr/bin/podman !profile podman /usr/{bin,local/bin}/podman !' /etc/apparmor.d/podman
+            sudo apparmor_parser -r /etc/apparmor.d/podman || true
+          fi
           # Rootless podman needs a subuid/subgid range for the current user.
           user="$(id -un)"
           grep -q "^${user}:" /etc/subuid || echo "${user}:100000:65536" | sudo tee -a /etc/subuid
