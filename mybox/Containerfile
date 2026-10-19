@@ -124,6 +124,7 @@ RUN <<EORUN
         cockpit-networkmanager \
         cockpit-podman \
         cockpit-storaged \
+        dnsmasq \
         erofs-utils \
         etckeeper \
         libcap \
@@ -132,6 +133,7 @@ RUN <<EORUN
         nfs-utils \
         pass \
         shairport-sync \
+        subscription-manager \
         tailscale \
         tmux \
         \
