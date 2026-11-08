@@ -33,7 +33,7 @@ cp -r "${EXTRACTED_DIR}/etc/"* /etc/
 rm -rf podman-static.tar.gz "${EXTRACTED_DIR}"
 
 # https://github.com/containers/podman/issues/9164
-rm /dev/shm/libpod_lock
+rm -f /dev/shm/libpod_lock
 
 # Avoids `Error: OCI runtime error: crun: unknown version specified`
 echo -e "[engine]\nruntime = \"runc\"" > /etc/containers/containers.conf
