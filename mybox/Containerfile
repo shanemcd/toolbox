@@ -95,6 +95,7 @@ RUN <<EORUN
         typst \
         uv \
         yq \
+        zellij \
         zsh \
         \
         `# Virtualization` \
