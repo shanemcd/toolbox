@@ -134,6 +134,7 @@ RUN <<EORUN
         pass \
         shairport-sync \
         subscription-manager \
+        sshuttle \
         tailscale \
         tmux \
         \
